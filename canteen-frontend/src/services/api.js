@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:8081/api';
+// Use relative URL so requests go through nginx proxy
+const API_BASE_URL = '/api';
 
 export const api = {
   // Get all meals
