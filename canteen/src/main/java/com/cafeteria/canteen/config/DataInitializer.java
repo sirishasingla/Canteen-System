@@ -40,29 +40,29 @@ public class DataInitializer implements CommandLineRunner {
     
     private void initializeEmployees() {
         // Create sample employees
-        Employee emp1 = new Employee();
-        emp1.setEmpId("EMP001");
-        emp1.setName("John Doe");
-        emp1.setDepartment("IT");
-        emp1.setRole(EmployeeRole.WORKER);
+        // Employee emp1 = new Employee();
+        // emp1.setEmpId("EMP001");
+        // emp1.setName("John Doe");
+        // emp1.setDepartment("IT");
+        // emp1.setRole(EmployeeRole.WORKER);
         
-        Employee emp2 = new Employee();
-        emp2.setEmpId("EMP002");
-        emp2.setName("Jane Smith");
-        emp2.setDepartment("HR");
-        emp2.setRole(EmployeeRole.STAFF);
+        // Employee emp2 = new Employee();
+        // emp2.setEmpId("EMP002");
+        // emp2.setName("Jane Smith");
+        // emp2.setDepartment("HR");
+        // emp2.setRole(EmployeeRole.STAFF);
         
-        Employee emp3 = new Employee();
-        emp3.setEmpId("EMP003");
-        emp3.setName("Bob Johnson");
-        emp3.setDepartment("Finance");
-        emp3.setRole(EmployeeRole.WORKER);
+        // Employee emp3 = new Employee();
+        // emp3.setEmpId("EMP003");
+        // emp3.setName("Bob Johnson");
+        // emp3.setDepartment("Finance");
+        // emp3.setRole(EmployeeRole.WORKER);
         
-        employeeRepository.save(emp1);
-        employeeRepository.save(emp2);
-        employeeRepository.save(emp3);
+        // employeeRepository.save(emp1);
+        // employeeRepository.save(emp2);
+        // employeeRepository.save(emp3);
         
-        System.out.println("Sample employees initialized");
+        // System.out.println("Sample employees initialized");
     }
     
     private void initializeMeals() {
