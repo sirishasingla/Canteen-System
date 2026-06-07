@@ -34,8 +34,8 @@ public class ExcelExportService {
             // Create header row
             Row headerRow = sheet.createRow(0);
             String[] headers = {
-                "Order ID", "Order Date/Time", "Customer Type", "Customer ID", 
-                "Customer Name", "Meal Type", "Item Name", "Quantity", 
+                "Order ID", "Order Date/Time", "Customer Type", "Employee ID",
+                "Employee Name", "Meal Type", "Item Name", "Quantity",
                 "Item Price", "Item Total", "Order Total"
             };
             

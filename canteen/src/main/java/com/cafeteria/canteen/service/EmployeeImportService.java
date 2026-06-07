@@ -26,7 +26,7 @@ public class EmployeeImportService {
     
     /**
      * Import employees from Excel file
-     * Expected format: Employee Code | Employee Name | Department
+     * Expected format: Employee Code | Employee Name | Department | Role (optional)
      * @param file Excel file with employee data
      * @param clearExisting if true, clears all existing employees before import
      * @return Map with import statistics
@@ -75,6 +75,7 @@ public class EmployeeImportService {
                     String empCode = "";
                     String empName = "";
                     String department = "";
+                    String role = "";
                     
                     // Try to find employee code in first few columns
                     for (int col = 0; col < 5 && empCode.isEmpty(); col++) {
@@ -94,6 +95,11 @@ public class EmployeeImportService {
                                 if (deptCell != null) {
                                     department = getCellValueAsString(deptCell).trim();
                                 }
+                                // Get role from column after that (optional)
+                                Cell roleCell = row.getCell(col + 3);
+                                if (roleCell != null) {
+                                    role = getCellValueAsString(roleCell).trim();
+                                }
                                 break;
                             }
                         }
@@ -106,7 +112,7 @@ public class EmployeeImportService {
                         continue;
                     }
                     
-                    log.debug("Row {}: Processing empCode='{}', empName='{}', dept='{}'", rowNum, empCode, empName, department);
+                    log.debug("Row {}: Processing empCode='{}', empName='{}', dept='{}', role='{}'", rowNum, empCode, empName, department, role);
                     
                     // Validate required fields
                     if (empCode.isEmpty() || empName.isEmpty()) {
@@ -121,11 +127,21 @@ public class EmployeeImportService {
                     
                     boolean isUpdate = employee.getId() != null;
                     
+                    // Determine role - default to STAFF if not specified or invalid
+                    EmployeeRole employeeRole = EmployeeRole.STAFF;
+                    if (!role.isEmpty()) {
+                        try {
+                            employeeRole = EmployeeRole.valueOf(role.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            log.warn("Row {}: Invalid role '{}', defaulting to STAFF", rowNum, role);
+                        }
+                    }
+                    
                     // Set employee data
                     employee.setEmpId(empCode);
                     employee.setName(empName);
                     employee.setDepartment(department.isEmpty() ? "General" : department);
-                    employee.setRole(EmployeeRole.STAFF);
+                    employee.setRole(employeeRole);
                     
                     // Save employee
                     employeeRepository.save(employee);

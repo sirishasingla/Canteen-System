@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import './MenuScreen.css';
 
-function MenuScreen({ customerType, cart, onAddToCart, onRemoveFromCart, onProceedToSummary, onBack }) {
+function MenuScreen({ customerType, customerData, cart, onAddToCart, onRemoveFromCart, onProceedToSummary, onBack }) {
   const [menuItems, setMenuItems] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -16,6 +18,7 @@ function MenuScreen({ customerType, cart, onAddToCart, onRemoveFromCart, onProce
       setLoading(true);
       const menu = await api.getAllMenuItems();
       setMenuItems(menu);
+      setFilteredItems(menu);
       setError('');
     } catch (err) {
       setError('Failed to load menu items. Please try again.');
@@ -23,6 +26,19 @@ function MenuScreen({ customerType, cart, onAddToCart, onRemoveFromCart, onProce
       setLoading(false);
     }
   };
+
+  // Filter items based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredItems(menuItems);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = menuItems.filter(item =>
+        item.itemName.toLowerCase().includes(query)
+      );
+      setFilteredItems(filtered);
+    }
+  }, [searchQuery, menuItems]);
 
   const getTotalAmount = () => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -52,7 +68,26 @@ function MenuScreen({ customerType, cart, onAddToCart, onRemoveFromCart, onProce
     <div className="menu-screen">
       <div className="menu-header">
         <button className="back-button" onClick={onBack}>← Back</button>
-        <h1>Select Your Items</h1>
+        <div className="header-center">
+          <h1>Select Your Items</h1>
+          {customerType === 'EMPLOYEE' && customerData.employeeName && (
+            <p className="customer-name">
+              👤 {customerData.employeeName}
+              {customerData.department && ` • ${customerData.department}`}
+              {customerData.role && ` • ${customerData.role}`}
+            </p>
+          )}
+          {customerType === 'OUTSIDER' && customerData.outsiderName && (
+            <p className="customer-name">👤 {customerData.outsiderName}</p>
+          )}
+          {customerType === 'GUEST' && (
+            <p className="customer-name">
+              👥 Guest of {customerData.hostEmployeeName || customerData.hostEmpId}
+              {customerData.teamName && ` • ${customerData.teamName}`}
+              {customerData.guestCount && ` • ${customerData.guestCount} guests`}
+            </p>
+          )}
+        </div>
         <div className="customer-badge">{customerType}</div>
       </div>
 
@@ -60,14 +95,36 @@ function MenuScreen({ customerType, cart, onAddToCart, onRemoveFromCart, onProce
 
       <div className="menu-content">
         <div className="menu-items">
-          <h2>Menu Items</h2>
+          <div className="menu-items-header">
+            <h2>Menu Items</h2>
+            <div className="search-bar">
+              <input
+                type="text"
+                placeholder="🔍 Search items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+              {searchQuery && (
+                <button
+                  className="clear-search"
+                  onClick={() => setSearchQuery('')}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
           {loading ? (
             <div className="loading">Loading items...</div>
-          ) : menuItems.length === 0 ? (
-            <div className="no-items">No items available for this meal</div>
+          ) : filteredItems.length === 0 ? (
+            <div className="no-items">
+              {searchQuery ? `No items found matching "${searchQuery}"` : 'No items available'}
+            </div>
           ) : (
             <div className="items-grid">
-              {menuItems.map(item => {
+              {filteredItems.map(item => {
                 const cartItem = cart.find(c => c.id === item.id);
                 const quantity = cartItem ? cartItem.quantity : 0;
 

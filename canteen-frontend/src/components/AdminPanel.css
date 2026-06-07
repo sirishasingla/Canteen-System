@@ -13,6 +13,7 @@
   background: white;
   border-radius: 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
 
 .header-buttons {
   display: flex;
@@ -35,7 +36,6 @@
 .manage-employees-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
-}
 }
 
 .admin-header h1 {
@@ -342,6 +342,7 @@
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+}
 
 /* Excel Reports Section */
 .section-description {
@@ -650,4 +651,94 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Meal Management Card */
+.meal-management-card {
+  text-align: center;
+  padding: 40px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
+  border-radius: 15px;
+  margin-top: 20px;
+  border: 2px solid #667eea;
+}
+
+.card-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.meal-management-card h3 {
+  color: #667eea;
+  font-size: 1.8rem;
+  margin: 0 0 15px 0;
+}
+
+.meal-management-card > p {
+  color: #666;
+  font-size: 1.1rem;
+  margin-bottom: 25px;
+}
+
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 25px auto;
+  max-width: 500px;
+  text-align: left;
+}
+
+.feature-list li {
+  padding: 12px 20px;
+  margin: 8px 0;
+  background: white;
+  border-radius: 8px;
+  color: #555;
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.feature-list li:hover {
+  transform: translateX(10px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+}
+
+.manage-meals-btn {
+  padding: 15px 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 20px;
+}
+
+.manage-meals-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+}
+
+@media (max-width: 768px) {
+  .meal-management-card {
+    padding: 30px 20px;
+  }
+
+  .card-icon {
+    font-size: 3rem;
+  }
+
+  .meal-management-card h3 {
+    font-size: 1.5rem;
+  }
+
+  .feature-list {
+    max-width: 100%;
+  }
+
+  .manage-meals-btn {
+    width: 100%;
+  }
 }

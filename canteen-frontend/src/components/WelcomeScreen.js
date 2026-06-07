@@ -31,8 +31,8 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
       }
       onCustomerTypeSelect('OUTSIDER', { outsiderName: outsiderName.trim() });
     } else if (selectedType === 'GUEST') {
-      if (!hostEmpId.trim() || !teamName.trim() || !guestCount) {
-        setError('Please fill in all guest details');
+      if (!hostEmpId.trim() || !guestCount) {
+        setError('Please enter Host Employee ID and Number of Guests');
         return;
       }
       if (isNaN(guestCount) || guestCount < 1) {
@@ -126,10 +126,10 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
                   />
                 </div>
                 <div className="input-group">
-                  <label>Team Name</label>
+                  <label>Team Name (Optional)</label>
                   <input
                     type="text"
-                    placeholder="Enter team/department name"
+                    placeholder="Enter team/department name (optional)"
                     value={teamName}
                     onChange={(e) => setTeamName(e.target.value)}
                   />

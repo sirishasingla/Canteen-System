@@ -55,6 +55,7 @@ public class ReportService {
     
     /**
      * Get cost per employee mapping between dates
+     * Includes both direct employee orders AND guest orders (charged to host employee)
      */
     public List<EmployeeCostDTO> getEmployeeCostReport(LocalDate startDate, LocalDate endDate) {
         LocalDateTime startTime = startDate.atStartOfDay();
@@ -62,14 +63,26 @@ public class ReportService {
         
         List<Orders> orders = orderRepository.findByOrderTimeBetween(startTime, endTime);
         
-        // Group by employee
+        // Group by employee (including host employees for guest orders)
         Map<String, EmployeeCostData> employeeMap = new HashMap<>();
         
         for (Orders order : orders) {
+            Employee targetEmployee = null;
+            
+            // For employee orders, use the employee
             if (order.getEmployee() != null) {
-                String empId = order.getEmployee().getEmpId();
-                EmployeeCostData data = employeeMap.getOrDefault(empId, 
-                    new EmployeeCostData(order.getEmployee()));
+                targetEmployee = order.getEmployee();
+            }
+            // For guest orders, charge to the host employee
+            else if (order.getHostEmployee() != null) {
+                targetEmployee = order.getHostEmployee();
+            }
+            
+            // Add order to the target employee's cost summary
+            if (targetEmployee != null) {
+                String empId = targetEmployee.getEmpId();
+                EmployeeCostData data = employeeMap.getOrDefault(empId,
+                    new EmployeeCostData(targetEmployee));
                 data.addOrder(order.getTotalAmount());
                 employeeMap.put(empId, data);
             }
@@ -225,11 +238,12 @@ public class ReportService {
                     dto.setCustomerId(order.getEmployee().getEmpId());
                     dto.setCustomerName(order.getEmployee().getName());
                 } else if (order.getOutsiderName() != null) {
-                    dto.setCustomerId("OUTSIDER");
+                    dto.setCustomerId("N/A");
                     dto.setCustomerName(order.getOutsiderName());
                 } else if (order.getHostEmployee() != null) {
-                    dto.setCustomerId("GUEST");
-                    dto.setCustomerName("Guest of " + order.getHostEmployee().getName());
+                    // For guest orders, show host employee ID and name
+                    dto.setCustomerId(order.getHostEmployee().getEmpId());
+                    dto.setCustomerName(order.getHostEmployee().getName());
                 }
                 
                 // Set item details
@@ -248,6 +262,7 @@ public class ReportService {
     /**
      * Get employee purchase summary report for Excel export
      * Report 2: Per-employee consolidated purchase summary
+     * Includes both direct employee orders AND guest orders (charged to host employee)
      */
     public List<EmployeePurchaseReportDTO> getEmployeePurchaseSummary(LocalDate startDate, LocalDate endDate) {
         LocalDateTime startTime = startDate.atStartOfDay();
@@ -255,14 +270,26 @@ public class ReportService {
         
         List<Orders> orders = orderRepository.findByOrderTimeBetween(startTime, endTime);
         
-        // Group by employee
+        // Group by employee (including host employees for guest orders)
         Map<String, EmployeePurchaseData> employeeMap = new HashMap<>();
         
         for (Orders order : orders) {
+            Employee targetEmployee = null;
+            
+            // For employee orders, use the employee
             if (order.getEmployee() != null) {
-                String empId = order.getEmployee().getEmpId();
-                EmployeePurchaseData data = employeeMap.getOrDefault(empId, 
-                    new EmployeePurchaseData(order.getEmployee()));
+                targetEmployee = order.getEmployee();
+            }
+            // For guest orders, charge to the host employee
+            else if (order.getHostEmployee() != null) {
+                targetEmployee = order.getHostEmployee();
+            }
+            
+            // Add order to the target employee's summary
+            if (targetEmployee != null) {
+                String empId = targetEmployee.getEmpId();
+                EmployeePurchaseData data = employeeMap.getOrDefault(empId,
+                    new EmployeePurchaseData(targetEmployee));
                 data.addOrder(order);
                 employeeMap.put(empId, data);
             }

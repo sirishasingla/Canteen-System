@@ -2,35 +2,12 @@ import React, { useState } from 'react';
 import './AdminPanel.css';
 import { api } from '../services/api';
 
-const AdminPanel = ({ onBack, onManageEmployees }) => {
-  const [activeTab, setActiveTab] = useState('sales');
-  const [reportData, setReportData] = useState([]);
+const AdminPanel = ({ onBack, onManageEmployees, onManageMeals }) => {
+  const [activeTab, setActiveTab] = useState('mealManagement');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Form states
-  const [salesForm, setSalesForm] = useState({
-    startTime: '',
-    endTime: ''
-  });
-
-  const [employeeCostForm, setEmployeeCostForm] = useState({
-    startDate: '',
-    endDate: ''
-  });
-
-  const [employeeHistoryForm, setEmployeeHistoryForm] = useState({
-    empId: '',
-    startDate: '',
-    endDate: ''
-  });
-
-  const [mealCountForm, setMealCountForm] = useState({
-    startDate: '',
-    endDate: '',
-    groupBy: 'both'
-  });
-
   const [excelForm, setExcelForm] = useState({
     startDate: '',
     endDate: ''
@@ -89,193 +66,6 @@ const AdminPanel = ({ onBack, onManageEmployees }) => {
     }
   };
 
-  const handleSalesReport = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const data = await api.getSalesReport(salesForm.startTime, salesForm.endTime);
-      setReportData(data);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch sales report');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmployeeCostReport = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const data = await api.getEmployeeCostReport(employeeCostForm.startDate, employeeCostForm.endDate);
-      setReportData(data);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch employee cost report');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmployeeHistoryReport = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const data = await api.getEmployeeOrderHistory(
-        employeeHistoryForm.empId,
-        employeeHistoryForm.startDate,
-        employeeHistoryForm.endDate
-      );
-      setReportData(data);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch employee history');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleMealCountReport = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const data = await api.getMealCountReport(
-        mealCountForm.startDate,
-        mealCountForm.endDate,
-        mealCountForm.groupBy
-      );
-      setReportData(data);
-    } catch (err) {
-      setError(err.message || 'Failed to fetch meal count report');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const exportToCSV = () => {
-    if (reportData.length === 0) return;
-
-    const headers = Object.keys(reportData[0]).join(',');
-    const rows = reportData.map(row => 
-      Object.values(row).map(val => 
-        typeof val === 'string' && val.includes(',') ? `"${val}"` : val
-      ).join(',')
-    );
-    
-    const csv = [headers, ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${activeTab}_report_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-  };
-
-  const renderSalesReportTable = () => (
-    <div className="report-table-container">
-      <table className="report-table">
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>Date & Time</th>
-            <th>Customer Type</th>
-            <th>Employee ID</th>
-            <th>Name</th>
-            <th>Meal Type</th>
-            <th>Items</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reportData.map((row, index) => (
-            <tr key={index}>
-              <td>{row.orderId}</td>
-              <td>{new Date(row.orderTime).toLocaleString()}</td>
-              <td>{row.customerType}</td>
-              <td>{row.employeeId || '-'}</td>
-              <td>{row.employeeName || '-'}</td>
-              <td>{row.mealType}</td>
-              <td>{row.itemCount}</td>
-              <td>₹{row.totalAmount.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan="7"><strong>Total</strong></td>
-            <td><strong>₹{reportData.reduce((sum, row) => sum + row.totalAmount, 0).toFixed(2)}</strong></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  );
-
-  const renderEmployeeCostTable = () => (
-    <div className="report-table-container">
-      <table className="report-table">
-        <thead>
-          <tr>
-            <th>Employee ID</th>
-            <th>Name</th>
-            <th>Department</th>
-            <th>Order Count</th>
-            <th>Total Cost</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reportData.map((row, index) => (
-            <tr key={index}>
-              <td>{row.employeeId}</td>
-              <td>{row.employeeName}</td>
-              <td>{row.department}</td>
-              <td>{row.orderCount}</td>
-              <td>₹{row.totalCost.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan="4"><strong>Total</strong></td>
-            <td><strong>₹{reportData.reduce((sum, row) => sum + row.totalCost, 0).toFixed(2)}</strong></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  );
-
-  const renderMealCountTable = () => (
-    <div className="report-table-container">
-      <table className="report-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Meal Type</th>
-            <th>Order Count</th>
-            <th>Total Revenue</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reportData.map((row, index) => (
-            <tr key={index}>
-              <td>{row.date || 'All Dates'}</td>
-              <td>{row.mealType}</td>
-              <td>{row.orderCount}</td>
-              <td>₹{row.totalRevenue.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan="2"><strong>Total</strong></td>
-            <td><strong>{reportData.reduce((sum, row) => sum + row.orderCount, 0)}</strong></td>
-            <td><strong>₹{reportData.reduce((sum, row) => sum + row.totalRevenue, 0).toFixed(2)}</strong></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  );
-
   return (
     <div className="admin-panel">
       <div className="admin-header">
@@ -289,191 +79,48 @@ const AdminPanel = ({ onBack, onManageEmployees }) => {
       </div>
 
       <div className="admin-tabs">
-        <button 
-          className={activeTab === 'sales' ? 'tab active' : 'tab'}
-          onClick={() => { setActiveTab('sales'); setReportData([]); setError(''); }}
-        >
-          Sales Report
-        </button>
-        <button 
-          className={activeTab === 'employeeCost' ? 'tab active' : 'tab'}
-          onClick={() => { setActiveTab('employeeCost'); setReportData([]); setError(''); }}
-        >
-          Employee Cost
-        </button>
-        <button 
-          className={activeTab === 'employeeHistory' ? 'tab active' : 'tab'}
-          onClick={() => { setActiveTab('employeeHistory'); setReportData([]); setError(''); }}
-        >
-          Employee History
-        </button>
         <button
-          className={activeTab === 'mealCount' ? 'tab active' : 'tab'}
-          onClick={() => { setActiveTab('mealCount'); setReportData([]); setError(''); }}
+          className={activeTab === 'mealManagement' ? 'tab active' : 'tab'}
+          onClick={() => { setActiveTab('mealManagement'); setError(''); }}
         >
-          Meal Statistics
+          🍽️ Meal Management
         </button>
         <button
           className={activeTab === 'excelReports' ? 'tab active' : 'tab'}
-          onClick={() => { setActiveTab('excelReports'); setReportData([]); setError(''); }}
+          onClick={() => { setActiveTab('excelReports'); setError(''); }}
         >
           📥 Excel Reports
         </button>
         <button
           className={activeTab === 'employeeUpload' ? 'tab active' : 'tab'}
-          onClick={() => { setActiveTab('employeeUpload'); setReportData([]); setError(''); }}
+          onClick={() => { setActiveTab('employeeUpload'); setError(''); }}
         >
           👥 Upload Employees
         </button>
       </div>
 
       <div className="admin-content">
-        {/* Sales Report Form */}
-        {activeTab === 'sales' && (
+        {/* Meal Management Tab */}
+        {activeTab === 'mealManagement' && (
           <div className="report-section">
-            <h2>Sales Report</h2>
-            <form onSubmit={handleSalesReport} className="report-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Start Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    value={salesForm.startTime}
-                    onChange={(e) => setSalesForm({...salesForm, startTime: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>End Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    value={salesForm.endTime}
-                    onChange={(e) => setSalesForm({...salesForm, endTime: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-              <button type="submit" className="generate-button" disabled={loading}>
-                {loading ? 'Generating...' : 'Generate Report'}
+            <h2>Meal Management</h2>
+            <p className="section-description">
+              Manage meal times, menu items, and meal configurations
+            </p>
+            <div className="meal-management-card">
+              <div className="card-icon">🍽️</div>
+              <h3>Meal & Menu Management</h3>
+              <p>Configure meal times, add/edit menu items, and manage pricing</p>
+              <ul className="feature-list">
+                <li>✨ Add/Edit Meal Times</li>
+                <li>✨ Manage Menu Items</li>
+                <li>✨ Configure Meal Pricing</li>
+                <li>✨ Enable/Disable Menu Items</li>
+              </ul>
+              <button className="manage-meals-btn" onClick={onManageMeals}>
+                🍽️ Open Meal Management
               </button>
-            </form>
-          </div>
-        )}
-
-        {/* Employee Cost Form */}
-        {activeTab === 'employeeCost' && (
-          <div className="report-section">
-            <h2>Employee Cost Report</h2>
-            <form onSubmit={handleEmployeeCostReport} className="report-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Start Date</label>
-                  <input
-                    type="date"
-                    value={employeeCostForm.startDate}
-                    onChange={(e) => setEmployeeCostForm({...employeeCostForm, startDate: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>End Date</label>
-                  <input
-                    type="date"
-                    value={employeeCostForm.endDate}
-                    onChange={(e) => setEmployeeCostForm({...employeeCostForm, endDate: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-              <button type="submit" className="generate-button" disabled={loading}>
-                {loading ? 'Generating...' : 'Generate Report'}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Employee History Form */}
-        {activeTab === 'employeeHistory' && (
-          <div className="report-section">
-            <h2>Employee Order History</h2>
-            <form onSubmit={handleEmployeeHistoryReport} className="report-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Employee ID</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., EMP001"
-                    value={employeeHistoryForm.empId}
-                    onChange={(e) => setEmployeeHistoryForm({...employeeHistoryForm, empId: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Start Date</label>
-                  <input
-                    type="date"
-                    value={employeeHistoryForm.startDate}
-                    onChange={(e) => setEmployeeHistoryForm({...employeeHistoryForm, startDate: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>End Date</label>
-                  <input
-                    type="date"
-                    value={employeeHistoryForm.endDate}
-                    onChange={(e) => setEmployeeHistoryForm({...employeeHistoryForm, endDate: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-              <button type="submit" className="generate-button" disabled={loading}>
-                {loading ? 'Generating...' : 'Generate Report'}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Meal Count Form */}
-        {activeTab === 'mealCount' && (
-          <div className="report-section">
-            <h2>Meal Count Statistics</h2>
-            <form onSubmit={handleMealCountReport} className="report-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Start Date</label>
-                  <input
-                    type="date"
-                    value={mealCountForm.startDate}
-                    onChange={(e) => setMealCountForm({...mealCountForm, startDate: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>End Date</label>
-                  <input
-                    type="date"
-                    value={mealCountForm.endDate}
-                    onChange={(e) => setMealCountForm({...mealCountForm, endDate: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Group By</label>
-                  <select
-                    value={mealCountForm.groupBy}
-                    onChange={(e) => setMealCountForm({...mealCountForm, groupBy: e.target.value})}
-                  >
-                    <option value="day">By Day</option>
-                    <option value="meal">By Meal Type</option>
-                    <option value="both">By Day & Meal</option>
-                  </select>
-                </div>
-              </div>
-              <button type="submit" className="generate-button" disabled={loading}>
-                {loading ? 'Generating...' : 'Generate Report'}
-              </button>
-            </form>
+            </div>
           </div>
         )}
 
@@ -563,7 +210,8 @@ const AdminPanel = ({ onBack, onManageEmployees }) => {
                   <li><strong>File Type:</strong> Excel (.xlsx or .xls)</li>
                   <li><strong>Column 1:</strong> Employee Code (Required, Unique)</li>
                   <li><strong>Column 2:</strong> Employee Name (Required)</li>
-                  <li><strong>Column 3:</strong> Department (Optional)</li>
+                  <li><strong>Column 3:</strong> Department (Optional, defaults to "General")</li>
+                  <li><strong>Column 4:</strong> Role (Optional: STAFF or WORKER, defaults to STAFF)</li>
                   <li><strong>First Row:</strong> Should contain column headers</li>
                 </ul>
                 <p className="note">💡 If an employee code already exists, the record will be updated</p>
@@ -654,29 +302,6 @@ const AdminPanel = ({ onBack, onManageEmployees }) => {
         {error && (
           <div className="error-message">
             ❌ {error}
-          </div>
-        )}
-
-        {/* Report Results */}
-        {reportData.length > 0 && (
-          <div className="report-results">
-            <div className="results-header">
-              <h3>Report Results ({reportData.length} records)</h3>
-              <button className="export-button" onClick={exportToCSV}>
-                📥 Export to CSV
-              </button>
-            </div>
-            
-            {activeTab === 'sales' && renderSalesReportTable()}
-            {activeTab === 'employeeCost' && renderEmployeeCostTable()}
-            {activeTab === 'employeeHistory' && renderSalesReportTable()}
-            {activeTab === 'mealCount' && renderMealCountTable()}
-          </div>
-        )}
-
-        {!loading && reportData.length === 0 && !error && (
-          <div className="no-data">
-            <p>📋 Fill in the form above and click "Generate Report" to view data</p>
           </div>
         )}
       </div>

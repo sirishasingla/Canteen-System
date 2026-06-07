@@ -30,9 +30,16 @@ export const api = {
     return response.json();
   },
 
-  // Get all menu items (no time restriction)
+  // Get all active menu items (no time restriction)
   getAllMenuItems: async () => {
     const response = await fetch(`${API_BASE_URL}/menu/items`);
+    if (!response.ok) throw new Error('Failed to fetch menu items');
+    return response.json();
+  },
+
+  // Get ALL menu items including inactive (for management)
+  getAllMenuItemsForManagement: async () => {
+    const response = await fetch(`${API_BASE_URL}/menu/all`);
     if (!response.ok) throw new Error('Failed to fetch menu items');
     return response.json();
   },
@@ -105,16 +112,17 @@ export const api = {
     );
     if (!response.ok) throw new Error('Failed to download Excel report');
     
-    // Get the blob from response
+    // Get the blob from response with correct MIME type
     const blob = await response.blob();
     
     // Extract filename from Content-Disposition header or create default
     const contentDisposition = response.headers.get('Content-Disposition');
     let filename = `${reportType}_${startDate}_to_${endDate}.xlsx`;
     if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-      if (filenameMatch) {
-        filename = filenameMatch[1];
+      // Match filename with or without quotes, and remove quotes if present
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '');
       }
     }
     
@@ -227,6 +235,86 @@ export const api = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to toggle employee status');
+    }
+    return response.json();
+  },
+
+  // Meal Management APIs
+  
+  // Create new meal
+  createMeal: async (mealData) => {
+    const response = await fetch(`${API_BASE_URL}/meals`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(mealData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to create meal');
+    }
+    return response.json();
+  },
+
+  // Update meal
+  updateMeal: async (mealId, mealData) => {
+    const response = await fetch(`${API_BASE_URL}/meals/${mealId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(mealData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update meal');
+    }
+    return response.json();
+  },
+
+  // Menu Item Management APIs
+  
+  // Create new menu item
+  createMenuItem: async (menuData) => {
+    const response = await fetch(`${API_BASE_URL}/menu`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(menuData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to create menu item');
+    }
+    return response.json();
+  },
+
+  // Update menu item
+  updateMenuItem: async (menuId, menuData) => {
+    const response = await fetch(`${API_BASE_URL}/menu/${menuId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(menuData),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update menu item');
+    }
+    return response.json();
+  },
+
+  // Toggle menu item active status
+  toggleMenuItem: async (menuId) => {
+    const response = await fetch(`${API_BASE_URL}/menu/${menuId}/toggle-status`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to toggle menu item status');
     }
     return response.json();
   },

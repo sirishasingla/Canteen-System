@@ -64,10 +64,26 @@ function OrderSummary({ customerType, customerData, cart, currentMeal, onConfirm
                 <span className="info-value">{customerType}</span>
               </div>
               {customerType === 'EMPLOYEE' && (
-                <div className="info-row">
-                  <span className="info-label">Employee ID:</span>
-                  <span className="info-value">{customerData.empId}</span>
-                </div>
+                <>
+                  {customerData.employeeName && (
+                    <div className="info-row">
+                      <span className="info-label">Name:</span>
+                      <span className="info-value">{customerData.employeeName}</span>
+                    </div>
+                  )}
+                  {customerData.department && (
+                    <div className="info-row">
+                      <span className="info-label">Department:</span>
+                      <span className="info-value">{customerData.department}</span>
+                    </div>
+                  )}
+                  {customerData.role && (
+                    <div className="info-row">
+                      <span className="info-label">Role:</span>
+                      <span className="info-value">{customerData.role}</span>
+                    </div>
+                  )}
+                </>
               )}
               {customerType === 'OUTSIDER' && (
                 <div className="info-row">
@@ -77,14 +93,24 @@ function OrderSummary({ customerType, customerData, cart, currentMeal, onConfirm
               )}
               {customerType === 'GUEST' && (
                 <>
-                  <div className="info-row">
-                    <span className="info-label">Host Employee ID:</span>
-                    <span className="info-value">{customerData.hostEmpId}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">Team:</span>
-                    <span className="info-value">{customerData.teamName}</span>
-                  </div>
+                  {customerData.hostEmployeeName && (
+                    <div className="info-row">
+                      <span className="info-label">Host Name:</span>
+                      <span className="info-value">{customerData.hostEmployeeName}</span>
+                    </div>
+                  )}
+                  {customerData.hostDepartment && (
+                    <div className="info-row">
+                      <span className="info-label">Host Department:</span>
+                      <span className="info-value">{customerData.hostDepartment}</span>
+                    </div>
+                  )}
+                  {customerData.teamName && (
+                    <div className="info-row">
+                      <span className="info-label">Team:</span>
+                      <span className="info-value">{customerData.teamName}</span>
+                    </div>
+                  )}
                   <div className="info-row">
                     <span className="info-label">Guest Count:</span>
                     <span className="info-value">{customerData.guestCount}</span>
@@ -151,7 +177,7 @@ function OrderSummary({ customerType, customerData, cart, currentMeal, onConfirm
           )}
           {customerType === 'GUEST' && (
             <div className="payment-note">
-              <p>👥 This order will be charged to host employee: {customerData.hostEmpId}</p>
+              <p>👥 This order will be charged to host employee: {customerData.hostEmployeeName || customerData.hostEmpId}</p>
             </div>
           )}
         </div>

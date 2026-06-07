@@ -52,4 +52,41 @@ public class MealService {
     public List<Meal> getAllMeals() {
         return mealRepository.findAll();
     }
+    
+    /**
+     * Create a new meal
+     */
+    public Meal createMeal(Meal meal) {
+        // Check if meal type already exists
+        if (mealRepository.findByType(meal.getType()).isPresent()) {
+            throw new RuntimeException("Meal type " + meal.getType() + " already exists");
+        }
+        
+        // Validate time range
+        if (meal.getStartTime().isAfter(meal.getEndTime())) {
+            throw new RuntimeException("Start time must be before end time");
+        }
+        
+        return mealRepository.save(meal);
+    }
+    
+    /**
+     * Update an existing meal
+     */
+    public Meal updateMeal(Long id, Meal mealData) {
+        Meal existingMeal = mealRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Meal not found with ID: " + id));
+        
+        // Validate time range
+        if (mealData.getStartTime().isAfter(mealData.getEndTime())) {
+            throw new RuntimeException("Start time must be before end time");
+        }
+        
+        // Update fields
+        existingMeal.setStartTime(mealData.getStartTime());
+        existingMeal.setEndTime(mealData.getEndTime());
+        // Note: We don't update the type as it's unique and shouldn't change
+        
+        return mealRepository.save(existingMeal);
+    }
 }

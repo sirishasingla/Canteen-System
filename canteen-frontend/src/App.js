@@ -6,17 +6,66 @@ import OrderSummary from './components/OrderSummary';
 import SuccessScreen from './components/SuccessScreen';
 import AdminPanel from './components/AdminPanel';
 import EmployeeManagement from './components/EmployeeManagement';
+import MealManagement from './components/MealManagement';
+import { api } from './services/api';
 
 function App() {
-  const [screen, setScreen] = useState('welcome'); // welcome, menu, summary, success, admin, employees
+  const [screen, setScreen] = useState('welcome'); // welcome, menu, summary, success, admin, employees, meals
   const [customerType, setCustomerType] = useState(null);
   const [customerData, setCustomerData] = useState({});
   const [cart, setCart] = useState([]);
   const [currentMeal, setCurrentMeal] = useState(null);
 
-  const handleCustomerTypeSelect = (type, data) => {
+  const handleCustomerTypeSelect = async (type, data) => {
     setCustomerType(type);
-    setCustomerData(data);
+    
+    // Fetch employee details if employee or guest
+    let enrichedData = { ...data };
+    
+    if (type === 'EMPLOYEE' && data.empId) {
+      try {
+        const employee = await api.getEmployeeByEmpId(data.empId);
+        
+        // Validate employee is active
+        if (!employee.isActive) {
+          alert('This employee account is inactive. Please contact HR.');
+          return; // Don't proceed with login
+        }
+        
+        enrichedData = {
+          ...data,
+          employeeName: employee.name,
+          department: employee.department,
+          role: employee.role
+        };
+      } catch (error) {
+        console.error('Failed to fetch employee details:', error);
+        alert('Invalid Employee ID. Please check and try again.');
+        return; // Don't proceed with login
+      }
+    } else if (type === 'GUEST' && data.hostEmpId) {
+      try {
+        const hostEmployee = await api.getEmployeeByEmpId(data.hostEmpId);
+        
+        // Validate host employee is active
+        if (!hostEmployee.isActive) {
+          alert('The host employee account is inactive. Please use a different host employee ID.');
+          return; // Don't proceed with login
+        }
+        
+        enrichedData = {
+          ...data,
+          hostEmployeeName: hostEmployee.name,
+          hostDepartment: hostEmployee.department
+        };
+      } catch (error) {
+        console.error('Failed to fetch host employee details:', error);
+        alert('Invalid Host Employee ID. Please check and try again.');
+        return; // Don't proceed with login
+      }
+    }
+    
+    setCustomerData(enrichedData);
     setScreen('menu');
   };
 
@@ -79,6 +128,14 @@ function App() {
     setScreen('admin');
   };
 
+  const handleOpenMealManagement = () => {
+    setScreen('meals');
+  };
+
+  const handleCloseMealManagement = () => {
+    setScreen('admin');
+  };
+
   return (
     <div className="App">
       {screen === 'welcome' && (
@@ -90,6 +147,7 @@ function App() {
       {screen === 'menu' && (
         <MenuScreen
           customerType={customerType}
+          customerData={customerData}
           cart={cart}
           onAddToCart={handleAddToCart}
           onRemoveFromCart={handleRemoveFromCart}
@@ -114,10 +172,14 @@ function App() {
         <AdminPanel
           onBack={handleCloseAdmin}
           onManageEmployees={handleOpenEmployeeManagement}
+          onManageMeals={handleOpenMealManagement}
         />
       )}
       {screen === 'employees' && (
         <EmployeeManagement onBack={handleCloseEmployeeManagement} />
+      )}
+      {screen === 'meals' && (
+        <MealManagement onBack={handleCloseMealManagement} />
       )}
     </div>
   );
