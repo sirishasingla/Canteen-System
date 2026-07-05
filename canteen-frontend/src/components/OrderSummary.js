@@ -30,8 +30,9 @@ function OrderSummary({ customerType, customerData, cart, currentMeal, onConfirm
         orderData.outsiderName = customerData.outsiderName;
       } else if (customerType === 'GUEST') {
         orderData.hostEmpId = customerData.hostEmpId;
-        orderData.teamName = customerData.teamName;
+        orderData.purpose = customerData.purpose;
         orderData.guestCount = customerData.guestCount;
+        orderData.companyEmployeeCount = customerData.companyEmployeeCount;
       }
 
       await api.createOrder(orderData);
@@ -105,16 +106,22 @@ function OrderSummary({ customerType, customerData, cart, currentMeal, onConfirm
                       <span className="info-value">{customerData.hostDepartment}</span>
                     </div>
                   )}
-                  {customerData.teamName && (
+                  {customerData.purpose && (
                     <div className="info-row">
-                      <span className="info-label">Team:</span>
-                      <span className="info-value">{customerData.teamName}</span>
+                      <span className="info-label">Purpose:</span>
+                      <span className="info-value">{customerData.purpose}</span>
                     </div>
                   )}
                   <div className="info-row">
                     <span className="info-label">Guest Count:</span>
                     <span className="info-value">{customerData.guestCount}</span>
                   </div>
+                  {customerData.companyEmployeeCount !== undefined && (
+                    <div className="info-row">
+                      <span className="info-label">Company Employees:</span>
+                      <span className="info-value">{customerData.companyEmployeeCount}</span>
+                    </div>
+                  )}
                 </>
               )}
               <div className="info-row">

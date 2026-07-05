@@ -83,8 +83,9 @@ function MenuScreen({ customerType, customerData, cart, onAddToCart, onRemoveFro
           {customerType === 'GUEST' && (
             <p className="customer-name">
               👥 Guest of {customerData.hostEmployeeName || customerData.hostEmpId}
-              {customerData.teamName && ` • ${customerData.teamName}`}
+              {customerData.purpose && ` • ${customerData.purpose}`}
               {customerData.guestCount && ` • ${customerData.guestCount} guests`}
+              {customerData.companyEmployeeCount && ` + ${customerData.companyEmployeeCount} employees`}
             </p>
           )}
         </div>

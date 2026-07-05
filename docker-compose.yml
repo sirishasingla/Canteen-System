@@ -29,6 +29,11 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SERVER_PORT: ${SERVER_PORT:-8080}
+      APP_JWT_SECRET: ${JWT_SECRET:-change-me-in-production-a-very-long-secret-key-min-32-chars}
+      APP_ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      APP_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      APP_MANAGER_USERNAME: ${MANAGER_USERNAME:-manager}
+      APP_MANAGER_PASSWORD: ${MANAGER_PASSWORD:-manager123}
     # No ports exposed - only accessible via frontend nginx proxy
     depends_on:
       postgres:

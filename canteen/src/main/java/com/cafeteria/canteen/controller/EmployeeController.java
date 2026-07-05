@@ -6,6 +6,7 @@ import com.cafeteria.canteen.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,15 +19,16 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class EmployeeController {
-    
+
     private final EmployeeImportService employeeImportService;
     private final EmployeeService employeeService;
-    
+
     /**
      * Upload Excel file to bulk import employees
      * POST /api/employees/upload
      */
     @PostMapping("/upload")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> uploadEmployees(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "clearExisting", defaultValue = "false") boolean clearExisting) {
@@ -59,6 +61,7 @@ public class EmployeeController {
      * GET /api/employees
      */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Employee>> getAllEmployees(
             @RequestParam(required = false) String search) {
         if (search != null && !search.trim().isEmpty()) {
@@ -87,6 +90,7 @@ public class EmployeeController {
      * POST /api/employees/create
      */
     @PostMapping("/create")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createEmployee(@RequestBody Employee employee) {
         try {
             Employee savedEmployee = employeeService.createEmployee(employee);
@@ -103,6 +107,7 @@ public class EmployeeController {
      * PUT /api/employees/{empId}
      */
     @PutMapping("/{empId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateEmployee(
             @PathVariable String empId,
             @RequestBody Employee employee) {
@@ -120,6 +125,7 @@ public class EmployeeController {
      * DELETE /api/employees/{empId}
      */
     @DeleteMapping("/{empId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> disableEmployee(@PathVariable String empId) {
         try {
             Employee employee = employeeService.disableEmployee(empId);
@@ -135,6 +141,7 @@ public class EmployeeController {
      * POST /api/employees/{empId}/enable
      */
     @PostMapping("/{empId}/enable")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> enableEmployee(@PathVariable String empId) {
         try {
             Employee employee = employeeService.enableEmployee(empId);
@@ -150,6 +157,7 @@ public class EmployeeController {
      * POST /api/employees/{empId}/toggle-status
      */
     @PostMapping("/{empId}/toggle-status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> toggleEmployeeStatus(@PathVariable String empId) {
         try {
             Employee employee = employeeService.toggleEmployeeStatus(empId);
@@ -166,6 +174,7 @@ public class EmployeeController {
      * GET /api/employees/count
      */
     @GetMapping("/count")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getEmployeeCount() {
         long count = employeeService.getEmployeeCount();
         return ResponseEntity.ok(Map.of("count", count));

@@ -1,15 +1,20 @@
 package com.cafeteria.canteen.config;
 
+import com.cafeteria.canteen.entity.AdminUser;
 import com.cafeteria.canteen.entity.Employee;
 import com.cafeteria.canteen.entity.Meal;
 import com.cafeteria.canteen.entity.Menu;
+import com.cafeteria.canteen.enums.AdminRole;
 import com.cafeteria.canteen.enums.EmployeeRole;
 import com.cafeteria.canteen.enums.MealType;
+import com.cafeteria.canteen.repository.AdminUserRepository;
 import com.cafeteria.canteen.repository.EmployeeRepository;
 import com.cafeteria.canteen.repository.MealRepository;
 import com.cafeteria.canteen.repository.MenuRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalTime;
@@ -17,24 +22,59 @@ import java.time.LocalTime;
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
-    
+
     private final EmployeeRepository employeeRepository;
     private final MealRepository mealRepository;
     private final MenuRepository menuRepository;
-    
+    private final AdminUserRepository adminUserRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Value("${app.admin.username:admin}")
+    private String adminUsername;
+
+    @Value("${app.admin.password:admin123}")
+    private String adminPassword;
+
+    @Value("${app.manager.username:manager}")
+    private String managerUsername;
+
+    @Value("${app.manager.password:manager123}")
+    private String managerPassword;
+
     @Override
     public void run(String... args) throws Exception {
         // Initialize only if database is empty
         if (employeeRepository.count() == 0) {
             initializeEmployees();
         }
-        
+
         if (mealRepository.count() == 0) {
             initializeMeals();
         }
-        
+
         if (menuRepository.count() == 0) {
             initializeMenu();
+        }
+
+        initializeAdminUsers();
+    }
+
+    private void initializeAdminUsers() {
+        if (adminUserRepository.findByUsername(adminUsername).isEmpty()) {
+            AdminUser admin = new AdminUser();
+            admin.setUsername(adminUsername);
+            admin.setPasswordHash(passwordEncoder.encode(adminPassword));
+            admin.setRole(AdminRole.ADMIN);
+            adminUserRepository.save(admin);
+            System.out.println("Admin user seeded: " + adminUsername);
+        }
+        if (adminUserRepository.findByUsername(managerUsername).isEmpty()) {
+            AdminUser manager = new AdminUser();
+            manager.setUsername(managerUsername);
+            manager.setPasswordHash(passwordEncoder.encode(managerPassword));
+            manager.setRole(AdminRole.MANAGER);
+            adminUserRepository.save(manager);
+            System.out.println("Manager user seeded: " + managerUsername);
         }
     }
     

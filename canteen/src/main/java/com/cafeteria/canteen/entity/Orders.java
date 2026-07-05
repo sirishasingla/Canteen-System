@@ -46,12 +46,18 @@ public class Orders {
     @JoinColumn(name = "host_employee_id")
     private Employee hostEmployee;
     
-    @Column(name = "team_name")
-    private String teamName;
-    
+    @Column(name = "purpose")
+    private String purpose;
+
     @Column(name = "guest_count")
     private Integer guestCount;
-    
+
+    @Column(name = "company_employee_count")
+    private Integer companyEmployeeCount;
+
+    @Column(name = "is_cancelled", nullable = false)
+    private Boolean isCancelled = false;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItems> orderItems = new ArrayList<>();
 }

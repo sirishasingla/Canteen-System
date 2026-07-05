@@ -2,6 +2,7 @@ package com.cafeteria.canteen.service;
 
 import com.cafeteria.canteen.dto.DetailedOrderReportDTO;
 import com.cafeteria.canteen.dto.EmployeePurchaseReportDTO;
+import com.cafeteria.canteen.dto.GuestOrderReportDTO;
 import com.cafeteria.canteen.dto.ItemPurchaseReportDTO;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -189,6 +190,60 @@ public class ExcelExportService {
         }
     }
     
+    /**
+     * Generate Guest Orders report Excel — one row per guest order.
+     */
+    public byte[] generateGuestOrderReport(List<GuestOrderReportDTO> data) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Guest Orders Report");
+
+            CellStyle headerStyle = createHeaderStyle(workbook);
+            CellStyle dateStyle = createDateStyle(workbook);
+            CellStyle currencyStyle = createCurrencyStyle(workbook);
+
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {
+                "Order ID", "Order Date/Time", "Host Employee ID", "Host Name",
+                "Host Department", "Purpose", "Guest Count", "Company Employees",
+                "Total Items", "Total Amount"
+            };
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowNum = 1;
+            for (GuestOrderReportDTO dto : data) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(dto.getOrderId());
+
+                Cell dateCell = row.createCell(1);
+                dateCell.setCellValue(dto.getOrderTime().format(DATE_TIME_FORMATTER));
+                dateCell.setCellStyle(dateStyle);
+
+                row.createCell(2).setCellValue(dto.getHostEmployeeId() != null ? dto.getHostEmployeeId() : "");
+                row.createCell(3).setCellValue(dto.getHostEmployeeName() != null ? dto.getHostEmployeeName() : "");
+                row.createCell(4).setCellValue(dto.getHostDepartment() != null ? dto.getHostDepartment() : "");
+                row.createCell(5).setCellValue(dto.getPurpose() != null ? dto.getPurpose() : "");
+                row.createCell(6).setCellValue(dto.getGuestCount() != null ? dto.getGuestCount() : 0);
+                row.createCell(7).setCellValue(dto.getCompanyEmployeeCount() != null ? dto.getCompanyEmployeeCount() : 0);
+                row.createCell(8).setCellValue(dto.getTotalItems() != null ? dto.getTotalItems() : 0);
+
+                Cell totalCell = row.createCell(9);
+                totalCell.setCellValue(dto.getTotalAmount() != null ? dto.getTotalAmount() : 0.0);
+                totalCell.setCellStyle(currencyStyle);
+            }
+
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
     /**
      * Create header cell style
      */

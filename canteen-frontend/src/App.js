@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import WelcomeScreen from './components/WelcomeScreen';
 import MenuScreen from './components/MenuScreen';
@@ -7,14 +7,27 @@ import SuccessScreen from './components/SuccessScreen';
 import AdminPanel from './components/AdminPanel';
 import EmployeeManagement from './components/EmployeeManagement';
 import MealManagement from './components/MealManagement';
-import { api } from './services/api';
+import LoginScreen from './components/LoginScreen';
+import OrderManagement from './components/OrderManagement';
+import { api, auth } from './services/api';
 
 function App() {
-  const [screen, setScreen] = useState('welcome'); // welcome, menu, summary, success, admin, employees, meals
+  const [screen, setScreen] = useState('welcome'); // welcome, menu, summary, success, login, admin, employees, meals
   const [customerType, setCustomerType] = useState(null);
   const [customerData, setCustomerData] = useState({});
   const [cart, setCart] = useState([]);
   const [currentMeal, setCurrentMeal] = useState(null);
+  const [adminUser, setAdminUser] = useState(auth.getUser());
+
+  useEffect(() => {
+    // Auto-logout on 401 from any authed request
+    const onUnauthorized = () => {
+      setAdminUser(null);
+      setScreen('welcome');
+    };
+    window.addEventListener('auth:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', onUnauthorized);
+  }, []);
 
   const handleCustomerTypeSelect = async (type, data) => {
     setCustomerType(type);
@@ -113,7 +126,23 @@ function App() {
   };
 
   const handleOpenAdmin = () => {
+    if (auth.isAuthenticated()) {
+      setAdminUser(auth.getUser());
+      setScreen('admin');
+    } else {
+      setScreen('login');
+    }
+  };
+
+  const handleLoginSuccess = (data) => {
+    setAdminUser({ username: data.username, role: data.role });
     setScreen('admin');
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setAdminUser(null);
+    setScreen('welcome');
   };
 
   const handleCloseAdmin = () => {
@@ -133,6 +162,14 @@ function App() {
   };
 
   const handleCloseMealManagement = () => {
+    setScreen('admin');
+  };
+
+  const handleOpenOrderManagement = () => {
+    setScreen('orders');
+  };
+
+  const handleCloseOrderManagement = () => {
     setScreen('admin');
   };
 
@@ -168,18 +205,30 @@ function App() {
       {screen === 'success' && (
         <SuccessScreen onStartOver={handleStartOver} />
       )}
-      {screen === 'admin' && (
-        <AdminPanel
-          onBack={handleCloseAdmin}
-          onManageEmployees={handleOpenEmployeeManagement}
-          onManageMeals={handleOpenMealManagement}
+      {screen === 'login' && (
+        <LoginScreen
+          onLoginSuccess={handleLoginSuccess}
+          onCancel={handleCloseAdmin}
         />
       )}
-      {screen === 'employees' && (
+      {screen === 'admin' && adminUser && (
+        <AdminPanel
+          currentUser={adminUser}
+          onBack={handleCloseAdmin}
+          onLogout={handleLogout}
+          onManageEmployees={handleOpenEmployeeManagement}
+          onManageMeals={handleOpenMealManagement}
+          onManageOrders={handleOpenOrderManagement}
+        />
+      )}
+      {screen === 'employees' && adminUser?.role === 'ADMIN' && (
         <EmployeeManagement onBack={handleCloseEmployeeManagement} />
       )}
-      {screen === 'meals' && (
+      {screen === 'meals' && adminUser && (
         <MealManagement onBack={handleCloseMealManagement} />
+      )}
+      {screen === 'orders' && adminUser?.role === 'ADMIN' && (
+        <OrderManagement onBack={handleCloseOrderManagement} />
       )}
     </div>
   );

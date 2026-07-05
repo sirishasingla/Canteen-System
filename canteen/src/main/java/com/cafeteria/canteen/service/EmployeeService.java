@@ -2,6 +2,7 @@ package com.cafeteria.canteen.service;
 
 import com.cafeteria.canteen.entity.Employee;
 import com.cafeteria.canteen.repository.EmployeeRepository;
+import com.cafeteria.canteen.util.EmpIdUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,21 +12,22 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class EmployeeService {
-    
+
     private final EmployeeRepository employeeRepository;
-    
+
     /**
      * Get all employees
      */
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAll();
     }
-    
+
     /**
-     * Get employee by empId
+     * Get employee by empId. Accepts either the full 8-digit ID or the last 5 digits.
      */
     public Employee getEmployeeByEmpId(String empId) {
-        return employeeRepository.findByEmpId(empId)
+        String normalized = EmpIdUtil.normalize(empId);
+        return employeeRepository.findByEmpId(normalized)
                 .orElseThrow(() -> new RuntimeException("Employee not found with ID: " + empId));
     }
     

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import './AdminPanel.css';
 import { api } from '../services/api';
+import ChangePasswordModal from './ChangePasswordModal';
 
-const AdminPanel = ({ onBack, onManageEmployees, onManageMeals }) => {
+const AdminPanel = ({ currentUser, onBack, onLogout, onManageEmployees, onManageMeals, onManageOrders }) => {
+  const isAdmin = currentUser?.role === 'ADMIN';
   const [activeTab, setActiveTab] = useState('mealManagement');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   // Form states
   const [excelForm, setExcelForm] = useState({
@@ -71,9 +74,25 @@ const AdminPanel = ({ onBack, onManageEmployees, onManageMeals }) => {
       <div className="admin-header">
         <h1>📊 Admin Panel</h1>
         <div className="header-buttons">
-          <button className="manage-employees-btn" onClick={onManageEmployees}>
-            👥 Manage Employees
+          {currentUser && (
+            <span className="admin-user-badge">
+              👤 {currentUser.username} <span className="role-tag">{currentUser.role}</span>
+            </span>
+          )}
+          {isAdmin && (
+            <button className="manage-employees-btn" onClick={onManageEmployees}>
+              👥 Manage Employees
+            </button>
+          )}
+          {isAdmin && (
+            <button className="manage-employees-btn" onClick={onManageOrders}>
+              📦 Manage Orders
+            </button>
+          )}
+          <button className="change-password-btn" onClick={() => setShowChangePassword(true)}>
+            🔑 Change Password
           </button>
+          <button className="logout-btn" onClick={onLogout}>🚪 Logout</button>
           <button className="back-button" onClick={onBack}>← Back to Kiosk</button>
         </div>
       </div>
@@ -91,12 +110,14 @@ const AdminPanel = ({ onBack, onManageEmployees, onManageMeals }) => {
         >
           📥 Excel Reports
         </button>
-        <button
-          className={activeTab === 'employeeUpload' ? 'tab active' : 'tab'}
-          onClick={() => { setActiveTab('employeeUpload'); setError(''); }}
-        >
-          👥 Upload Employees
-        </button>
+        {isAdmin && (
+          <button
+            className={activeTab === 'employeeUpload' ? 'tab active' : 'tab'}
+            onClick={() => { setActiveTab('employeeUpload'); setError(''); }}
+          >
+            👥 Upload Employees
+          </button>
+        )}
       </div>
 
       <div className="admin-content">
@@ -191,12 +212,24 @@ const AdminPanel = ({ onBack, onManageEmployees, onManageMeals }) => {
                   {loading ? 'Downloading...' : '📥 Download Excel'}
                 </button>
               </div>
+
+              <div className="excel-report-card">
+                <div className="report-icon">👥</div>
+                <h3>Guest Orders Report</h3>
+                <button
+                  className="download-excel-button"
+                  onClick={() => handleDownloadExcel('guest-orders')}
+                  disabled={loading || !excelForm.startDate || !excelForm.endDate}
+                >
+                  {loading ? 'Downloading...' : '📥 Download Excel'}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* Employee Upload Tab */}
-        {activeTab === 'employeeUpload' && (
+        {activeTab === 'employeeUpload' && isAdmin && (
           <div className="report-section">
             <h2>Upload Employee Master Data</h2>
             <p className="section-description">
@@ -305,6 +338,10 @@ const AdminPanel = ({ onBack, onManageEmployees, onManageMeals }) => {
           </div>
         )}
       </div>
+
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+      )}
     </div>
   );
 };

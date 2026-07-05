@@ -6,8 +6,9 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
   const [empId, setEmpId] = useState('');
   const [outsiderName, setOutsiderName] = useState('');
   const [hostEmpId, setHostEmpId] = useState('');
-  const [teamName, setTeamName] = useState('');
+  const [purpose, setPurpose] = useState('');
   const [guestCount, setGuestCount] = useState('');
+  const [companyEmployeeCount, setCompanyEmployeeCount] = useState('');
   const [error, setError] = useState('');
 
   const handleTypeSelect = (type) => {
@@ -31,18 +32,23 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
       }
       onCustomerTypeSelect('OUTSIDER', { outsiderName: outsiderName.trim() });
     } else if (selectedType === 'GUEST') {
-      if (!hostEmpId.trim() || !guestCount) {
-        setError('Please enter Host Employee ID and Number of Guests');
+      if (!hostEmpId.trim() || !purpose.trim() || !guestCount || !companyEmployeeCount) {
+        setError('Please fill in Host Employee ID, Purpose, Number of Guests, and Number of Company Employees');
         return;
       }
       if (isNaN(guestCount) || guestCount < 1) {
         setError('Please enter a valid guest count');
         return;
       }
+      if (isNaN(companyEmployeeCount) || companyEmployeeCount < 1) {
+        setError('Please enter a valid number of company employees');
+        return;
+      }
       onCustomerTypeSelect('GUEST', {
         hostEmpId: hostEmpId.trim(),
-        teamName: teamName.trim(),
-        guestCount: parseInt(guestCount)
+        purpose: purpose.trim(),
+        guestCount: parseInt(guestCount),
+        companyEmployeeCount: parseInt(companyEmployeeCount)
       });
     }
   };
@@ -90,7 +96,7 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
                 <label>Employee ID</label>
                 <input
                   type="text"
-                  placeholder="Enter your Employee ID (e.g., EMP001)"
+                  placeholder="Full 8-digit ID or last 5 digits"
                   value={empId}
                   onChange={(e) => setEmpId(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
@@ -119,19 +125,19 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
                   <label>Host Employee ID</label>
                   <input
                     type="text"
-                    placeholder="Enter host employee ID"
+                    placeholder="Full 8-digit ID or last 5 digits"
                     value={hostEmpId}
                     onChange={(e) => setHostEmpId(e.target.value)}
                     autoFocus
                   />
                 </div>
                 <div className="input-group">
-                  <label>Team Name (Optional)</label>
+                  <label>Purpose *</label>
                   <input
                     type="text"
-                    placeholder="Enter team/department name (optional)"
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
+                    placeholder="e.g., Client meeting, interview panel"
+                    value={purpose}
+                    onChange={(e) => setPurpose(e.target.value)}
                   />
                 </div>
                 <div className="input-group">
@@ -141,6 +147,16 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
                     placeholder="Enter number of guests"
                     value={guestCount}
                     onChange={(e) => setGuestCount(e.target.value)}
+                    min="1"
+                  />
+                </div>
+                <div className="input-group">
+                  <label>Number of Company Employees</label>
+                  <input
+                    type="number"
+                    placeholder="Employees hosting the guests"
+                    value={companyEmployeeCount}
+                    onChange={(e) => setCompanyEmployeeCount(e.target.value)}
                     min="1"
                     onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
                   />

@@ -27,6 +27,11 @@ public class OrderResponse {
     
     // For guest
     private String hostEmployeeName;
-    private String teamName;
+    private String hostEmployeeId;
+    private String purpose;
     private Integer guestCount;
+    private Integer companyEmployeeCount;
+
+    private String employeeId;
+    private Boolean isCancelled;
 }

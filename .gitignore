@@ -1,0 +1,13 @@
+# Environment files — NEVER commit these; they contain secrets
+.env
+.env.local
+.env.*.local
+
+# OS / editor files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Local logs
+*.log

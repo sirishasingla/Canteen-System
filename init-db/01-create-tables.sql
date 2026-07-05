@@ -6,6 +6,16 @@ CREATE TYPE customer_type AS ENUM ('EMPLOYEE', 'OUTSIDER', 'GUEST');
 CREATE TYPE employee_role AS ENUM ('WORKER', 'STAFF');
 CREATE TYPE meal_type AS ENUM ('BREAKFAST', 'LUNCH', 'DINNER');
 
+-- Create Admin User table (for authenticated admin panel access)
+CREATE TABLE IF NOT EXISTS admin_user (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'MANAGER')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_admin_user_username ON admin_user(username);
+
 -- Create Employee table
 CREATE TABLE IF NOT EXISTS employee (
     id BIGSERIAL PRIMARY KEY,
@@ -50,8 +60,10 @@ CREATE TABLE IF NOT EXISTS orders (
     customer_type customer_type NOT NULL,
     outsider_name VARCHAR(100),
     host_employee_id BIGINT REFERENCES employee(id) ON DELETE SET NULL,
-    team_name VARCHAR(100),
+    purpose VARCHAR(255),
     guest_count INTEGER CHECK (guest_count > 0),
+    company_employee_count INTEGER CHECK (company_employee_count > 0),
+    is_cancelled BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

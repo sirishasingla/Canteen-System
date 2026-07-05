@@ -149,7 +149,32 @@ public class ReportController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         headers.setContentDispositionFormData("attachment", filename);
-        
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(excelFile);
+    }
+
+    /**
+     * Download guest orders report as Excel
+     * GET /api/reports/excel/guest-orders?startDate=2024-01-01&endDate=2024-01-31
+     */
+    @GetMapping("/excel/guest-orders")
+    public ResponseEntity<byte[]> downloadGuestOrderReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) throws IOException {
+
+        List<GuestOrderReportDTO> data = reportService.getGuestOrderReport(startDate, endDate);
+        byte[] excelFile = excelExportService.generateGuestOrderReport(data);
+
+        String filename = String.format("Guest_Orders_Report_%s_to_%s.xlsx",
+            startDate.format(DateTimeFormatter.ISO_DATE),
+            endDate.format(DateTimeFormatter.ISO_DATE));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", filename);
+
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(excelFile);

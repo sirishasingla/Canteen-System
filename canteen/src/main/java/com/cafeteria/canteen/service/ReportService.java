@@ -4,8 +4,10 @@ import com.cafeteria.canteen.dto.*;
 import com.cafeteria.canteen.entity.Employee;
 import com.cafeteria.canteen.entity.OrderItems;
 import com.cafeteria.canteen.entity.Orders;
+import com.cafeteria.canteen.enums.CustomerType;
 import com.cafeteria.canteen.repository.EmployeeRepository;
 import com.cafeteria.canteen.repository.OrderRepository;
+import com.cafeteria.canteen.util.EmpIdUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +31,7 @@ public class ReportService {
      * Get sales report between start and end date/time
      */
     public List<SalesReportDTO> getSalesReport(LocalDateTime startTime, LocalDateTime endTime) {
-        List<Orders> orders = orderRepository.findByOrderTimeBetween(startTime, endTime);
+        List<Orders> orders = orderRepository.findByOrderTimeBetweenAndIsCancelledFalse(startTime, endTime);
         
         return orders.stream().map(order -> {
             SalesReportDTO dto = new SalesReportDTO();
@@ -54,40 +56,29 @@ public class ReportService {
     }
     
     /**
-     * Get cost per employee mapping between dates
-     * Includes both direct employee orders AND guest orders (charged to host employee)
+     * Cost per employee. Only includes direct EMPLOYEE orders — guest orders
+     * live in the dedicated Guest Orders report.
      */
     public List<EmployeeCostDTO> getEmployeeCostReport(LocalDate startDate, LocalDate endDate) {
         LocalDateTime startTime = startDate.atStartOfDay();
         LocalDateTime endTime = endDate.atTime(LocalTime.MAX);
-        
-        List<Orders> orders = orderRepository.findByOrderTimeBetween(startTime, endTime);
-        
-        // Group by employee (including host employees for guest orders)
+
+        List<Orders> orders = orderRepository.findByOrderTimeBetweenAndIsCancelledFalse(startTime, endTime);
+
         Map<String, EmployeeCostData> employeeMap = new HashMap<>();
-        
+
         for (Orders order : orders) {
-            Employee targetEmployee = null;
-            
-            // For employee orders, use the employee
-            if (order.getEmployee() != null) {
-                targetEmployee = order.getEmployee();
+            if (order.getCustomerType() != CustomerType.EMPLOYEE || order.getEmployee() == null) {
+                continue;
             }
-            // For guest orders, charge to the host employee
-            else if (order.getHostEmployee() != null) {
-                targetEmployee = order.getHostEmployee();
-            }
-            
-            // Add order to the target employee's cost summary
-            if (targetEmployee != null) {
-                String empId = targetEmployee.getEmpId();
-                EmployeeCostData data = employeeMap.getOrDefault(empId,
-                    new EmployeeCostData(targetEmployee));
-                data.addOrder(order.getTotalAmount());
-                employeeMap.put(empId, data);
-            }
+            Employee targetEmployee = order.getEmployee();
+            String empId = targetEmployee.getEmpId();
+            EmployeeCostData data = employeeMap.getOrDefault(empId,
+                new EmployeeCostData(targetEmployee));
+            data.addOrder(order.getTotalAmount());
+            employeeMap.put(empId, data);
         }
-        
+
         return employeeMap.values().stream()
             .map(data -> new EmployeeCostDTO(
                 data.employee.getEmpId(),
@@ -103,13 +94,13 @@ public class ReportService {
      * Get order history for a specific employee
      */
     public List<SalesReportDTO> getEmployeeOrderHistory(String empId, LocalDate startDate, LocalDate endDate) {
-        Employee employee = employeeRepository.findByEmpId(empId)
+        Employee employee = employeeRepository.findByEmpId(EmpIdUtil.normalize(empId))
             .orElseThrow(() -> new RuntimeException("Employee not found with ID: " + empId));
         
         LocalDateTime startTime = startDate.atStartOfDay();
         LocalDateTime endTime = endDate.atTime(LocalTime.MAX);
         
-        List<Orders> orders = orderRepository.findByEmployeeAndOrderTimeBetween(employee, startTime, endTime);
+        List<Orders> orders = orderRepository.findByEmployeeAndOrderTimeBetweenAndIsCancelledFalse(employee, startTime, endTime);
         
         return orders.stream().map(order -> {
             SalesReportDTO dto = new SalesReportDTO();
@@ -132,7 +123,7 @@ public class ReportService {
         LocalDateTime startTime = startDate.atStartOfDay();
         LocalDateTime endTime = endDate.atTime(LocalTime.MAX);
         
-        List<Orders> orders = orderRepository.findByOrderTimeBetween(startTime, endTime);
+        List<Orders> orders = orderRepository.findByOrderTimeBetweenAndIsCancelledFalse(startTime, endTime);
         
         if ("day".equalsIgnoreCase(groupBy)) {
             return groupByDay(orders);
@@ -261,40 +252,30 @@ public class ReportService {
     
     /**
      * Get employee purchase summary report for Excel export
-     * Report 2: Per-employee consolidated purchase summary
-     * Includes both direct employee orders AND guest orders (charged to host employee)
+     * Report 2: Per-employee consolidated purchase summary.
+     * Excludes GUEST orders — those live in the dedicated Guest Orders report.
      */
     public List<EmployeePurchaseReportDTO> getEmployeePurchaseSummary(LocalDate startDate, LocalDate endDate) {
         LocalDateTime startTime = startDate.atStartOfDay();
         LocalDateTime endTime = endDate.atTime(LocalTime.MAX);
-        
-        List<Orders> orders = orderRepository.findByOrderTimeBetween(startTime, endTime);
-        
-        // Group by employee (including host employees for guest orders)
+
+        List<Orders> orders = orderRepository.findByOrderTimeBetweenAndIsCancelledFalse(startTime, endTime);
+
         Map<String, EmployeePurchaseData> employeeMap = new HashMap<>();
-        
+
         for (Orders order : orders) {
-            Employee targetEmployee = null;
-            
-            // For employee orders, use the employee
-            if (order.getEmployee() != null) {
-                targetEmployee = order.getEmployee();
+            // Only direct employee orders — skip GUEST and OUTSIDER
+            if (order.getCustomerType() != CustomerType.EMPLOYEE || order.getEmployee() == null) {
+                continue;
             }
-            // For guest orders, charge to the host employee
-            else if (order.getHostEmployee() != null) {
-                targetEmployee = order.getHostEmployee();
-            }
-            
-            // Add order to the target employee's summary
-            if (targetEmployee != null) {
-                String empId = targetEmployee.getEmpId();
-                EmployeePurchaseData data = employeeMap.getOrDefault(empId,
-                    new EmployeePurchaseData(targetEmployee));
-                data.addOrder(order);
-                employeeMap.put(empId, data);
-            }
+            Employee targetEmployee = order.getEmployee();
+            String empId = targetEmployee.getEmpId();
+            EmployeePurchaseData data = employeeMap.getOrDefault(empId,
+                new EmployeePurchaseData(targetEmployee));
+            data.addOrder(order);
+            employeeMap.put(empId, data);
         }
-        
+
         return employeeMap.values().stream()
             .map(data -> new EmployeePurchaseReportDTO(
                 data.employee.getEmpId(),
@@ -305,6 +286,33 @@ public class ReportService {
                 data.totalCost
             ))
             .sorted((a, b) -> b.getTotalCost().compareTo(a.getTotalCost()))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Guest orders report — one row per guest order.
+     */
+    public List<GuestOrderReportDTO> getGuestOrderReport(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startTime = startDate.atStartOfDay();
+        LocalDateTime endTime = endDate.atTime(LocalTime.MAX);
+
+        List<Orders> orders = orderRepository.findByOrderTimeBetweenAndIsCancelledFalse(startTime, endTime);
+
+        return orders.stream()
+            .filter(o -> o.getCustomerType() == CustomerType.GUEST && o.getHostEmployee() != null)
+            .map(o -> new GuestOrderReportDTO(
+                o.getId(),
+                o.getOrderTime(),
+                o.getHostEmployee().getEmpId(),
+                o.getHostEmployee().getName(),
+                o.getHostEmployee().getDepartment(),
+                o.getPurpose(),
+                o.getGuestCount(),
+                o.getCompanyEmployeeCount(),
+                o.getOrderItems().size(),
+                o.getTotalAmount()
+            ))
+            .sorted((a, b) -> b.getOrderTime().compareTo(a.getOrderTime()))
             .collect(Collectors.toList());
     }
     
