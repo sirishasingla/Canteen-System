@@ -41,6 +41,11 @@ public class EmployeeService {
         if (employeeRepository.findByEmpId(employee.getEmpId()).isPresent()) {
             throw new RuntimeException("Employee with code " + employee.getEmpId() + " already exists");
         }
+        // isActive is NOT NULL in DB; frontend typically doesn't include it on create so
+        // Jackson leaves it null when binding via @AllArgsConstructor. Default to true.
+        if (employee.getIsActive() == null) {
+            employee.setIsActive(true);
+        }
         return employeeRepository.save(employee);
     }
     
