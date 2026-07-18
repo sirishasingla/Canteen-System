@@ -11,12 +11,14 @@ function MenuScreen({ customerType, customerData, cart, onAddToCart, onRemoveFro
 
   useEffect(() => {
     loadAllMenuItems();
-  }, []);
+    // Reload whenever the identified customer changes so pricing/visibility follows.
+  }, [customerType, customerData?.empId]);
 
   const loadAllMenuItems = async () => {
     try {
       setLoading(true);
-      const menu = await api.getAllMenuItems();
+      const empId = customerType === 'EMPLOYEE' ? customerData?.empId : null;
+      const menu = await api.getAllMenuItems(customerType, empId);
       setMenuItems(menu);
       setFilteredItems(menu);
       setError('');

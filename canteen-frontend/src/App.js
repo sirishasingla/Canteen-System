@@ -227,7 +227,7 @@ function App() {
       {screen === 'meals' && adminUser && (
         <MealManagement onBack={handleCloseMealManagement} />
       )}
-      {screen === 'orders' && adminUser?.role === 'ADMIN' && (
+      {screen === 'orders' && (adminUser?.role === 'ADMIN' || adminUser?.role === 'MANAGER') && (
         <OrderManagement onBack={handleCloseOrderManagement} />
       )}
     </div>

@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,6 +14,12 @@ import lombok.NoArgsConstructor;
 public class MenuResponse {
     private Long id;
     private String itemName;
+    /** Effective price for the requesting caller (already role-resolved). */
     private Double price;
-    private String mealType;
+    /** Raw per-audience prices (nullable). Included so admin UI can render them. */
+    private Double staffPrice;
+    private Double workerPrice;
+    private Double outsiderPrice;
+    private Integer displayOrder;
+    private List<String> mealTypes;
 }

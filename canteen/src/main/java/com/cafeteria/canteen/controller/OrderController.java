@@ -31,47 +31,47 @@ public class OrderController {
     }
 
     /**
-     * Admin: create an order (may be backdated via request.orderTime).
+     * Admin/Manager: create an order (may be backdated via request.orderTime).
      */
     @PostMapping("/admin")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<OrderResponse> createOrderAsAdmin(@RequestBody OrderRequest request) {
         OrderResponse response = orderService.createOrderAsAdmin(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     /**
-     * Admin: update an existing order.
+     * Admin/Manager: update an existing order.
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<OrderResponse> updateOrder(@PathVariable Long id, @RequestBody OrderRequest request) {
         return ResponseEntity.ok(orderService.updateOrder(id, request));
     }
 
     /**
-     * Admin: soft-delete (cancel) an order.
+     * Admin/Manager: soft-delete (cancel) an order.
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<OrderResponse> cancelOrder(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.cancelOrder(id));
     }
 
     /**
-     * Admin: restore a cancelled order.
+     * Admin/Manager: restore a cancelled order.
      */
     @PostMapping("/{id}/restore")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<OrderResponse> restoreOrder(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.restoreOrder(id));
     }
 
     /**
-     * Admin: list all orders (including cancelled) in a date range.
+     * Admin/Manager: list all orders (including cancelled) in a date range.
      */
     @GetMapping("/admin/all")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     public ResponseEntity<List<OrderResponse>> getAllOrdersInRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {

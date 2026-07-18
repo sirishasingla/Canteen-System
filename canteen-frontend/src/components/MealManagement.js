@@ -24,7 +24,11 @@ const MealManagement = ({ onBack }) => {
     id: null,
     itemName: '',
     price: '',
-    mealId: '',
+    staffPrice: '',
+    workerPrice: '',
+    outsiderPrice: '',
+    roleBasedPricing: false,
+    mealIds: [],
     isActive: true
   });
 
@@ -105,7 +109,11 @@ const MealManagement = ({ onBack }) => {
       id: null,
       itemName: '',
       price: '',
-      mealId: '',
+      staffPrice: '',
+      workerPrice: '',
+      outsiderPrice: '',
+      roleBasedPricing: false,
+      mealIds: [],
       isActive: true
     });
     setShowModal(true);
@@ -114,11 +122,17 @@ const MealManagement = ({ onBack }) => {
 
   const handleEditMenuItem = (item) => {
     setModalMode('edit');
+    const existingIds = (item.meals || []).map(m => m.id);
+    const hasRolePricing = item.staffPrice != null || item.workerPrice != null || item.outsiderPrice != null;
     setMenuForm({
       id: item.id,
       itemName: item.itemName,
       price: item.price,
-      mealId: item.meal?.id || '',
+      staffPrice: item.staffPrice != null ? item.staffPrice : '',
+      workerPrice: item.workerPrice != null ? item.workerPrice : '',
+      outsiderPrice: item.outsiderPrice != null ? item.outsiderPrice : '',
+      roleBasedPricing: hasRolePricing,
+      mealIds: existingIds,
       isActive: item.isActive
     });
     setShowModal(true);
@@ -134,7 +148,13 @@ const MealManagement = ({ onBack }) => {
       const payload = {
         itemName: menuForm.itemName,
         price: parseFloat(menuForm.price),
-        mealId: menuForm.mealId ? parseInt(menuForm.mealId) : null,
+        staffPrice: menuForm.roleBasedPricing && menuForm.staffPrice !== ''
+          ? parseFloat(menuForm.staffPrice) : null,
+        workerPrice: menuForm.roleBasedPricing && menuForm.workerPrice !== ''
+          ? parseFloat(menuForm.workerPrice) : null,
+        outsiderPrice: menuForm.roleBasedPricing && menuForm.outsiderPrice !== ''
+          ? parseFloat(menuForm.outsiderPrice) : null,
+        mealIds: menuForm.mealIds.map(id => parseInt(id)),
         isActive: menuForm.isActive
       };
 
@@ -154,6 +174,13 @@ const MealManagement = ({ onBack }) => {
     }
   };
 
+  const toggleMealIdInForm = (mealId) => {
+    setMenuForm(prev => {
+      const has = prev.mealIds.includes(mealId);
+      return { ...prev, mealIds: has ? prev.mealIds.filter(id => id !== mealId) : [...prev.mealIds, mealId] };
+    });
+  };
+
   const handleToggleMenuItem = async (item) => {
     const action = item.isActive ? 'disable' : 'enable';
     if (!window.confirm(`Are you sure you want to ${action} "${item.itemName}"?`)) {
@@ -170,6 +197,64 @@ const MealManagement = ({ onBack }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMoveMenuItem = async (item, direction) => {
+    setLoading(true);
+    try {
+      await api.moveMenuItem(item.id, direction);
+      await loadMenuItems();
+    } catch (err) {
+      setError(err.message || 'Failed to reorder menu item');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Drag-and-drop reorder for the menu items table.
+  // Optimistically mutate the local list, then persist. Roll back on failure.
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  const handleDragStart = (idx) => (e) => {
+    setDragIndex(idx);
+    // Firefox needs data set on the transfer to allow the drag to actually start.
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(idx)); } catch (_) {}
+  };
+
+  const handleDragOver = (idx) => (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== idx) setDragOverIndex(idx);
+  };
+
+  const handleDragLeave = () => setDragOverIndex(null);
+
+  const handleDrop = (targetIdx) => async (e) => {
+    e.preventDefault();
+    const sourceIdx = dragIndex;
+    setDragIndex(null);
+    setDragOverIndex(null);
+    if (sourceIdx == null || sourceIdx === targetIdx) return;
+
+    const prev = menuItems;
+    const next = [...prev];
+    const [moved] = next.splice(sourceIdx, 1);
+    next.splice(targetIdx, 0, moved);
+    setMenuItems(next);
+
+    try {
+      await api.reorderMenuItems(next.map(i => i.id));
+    } catch (err) {
+      setError(err.message || 'Failed to reorder menu items');
+      setMenuItems(prev); // roll back the optimistic update
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   const getMealName = (mealId) => {
@@ -255,9 +340,12 @@ const MealManagement = ({ onBack }) => {
           </div>
 
           <div className="menu-table-container">
+            <p className="drag-hint">💡 Drag rows by the ⋮⋮ handle to change display order — kiosk shows items in this order.</p>
             <table className="menu-table">
               <thead>
                 <tr>
+                  <th></th>
+                  <th>#</th>
                   <th>Item Name</th>
                   <th>Meal Type</th>
                   <th>Price</th>
@@ -268,14 +356,45 @@ const MealManagement = ({ onBack }) => {
               <tbody>
                 {menuItems.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="no-data">No menu items found</td>
+                    <td colSpan="7" className="no-data">No menu items found</td>
                   </tr>
                 ) : (
-                  menuItems.map((item) => (
-                    <tr key={item.id} className={!item.isActive ? 'disabled-row' : ''}>
+                  menuItems.map((item, idx) => {
+                    const hasRolePricing = item.staffPrice != null || item.workerPrice != null || item.outsiderPrice != null;
+                    const rowClasses = [
+                      !item.isActive ? 'disabled-row' : '',
+                      dragIndex === idx ? 'dragging' : '',
+                      dragOverIndex === idx && dragIndex !== idx ? 'drag-over' : '',
+                    ].filter(Boolean).join(' ');
+                    return (
+                    <tr
+                      key={item.id}
+                      className={rowClasses}
+                      draggable
+                      onDragStart={handleDragStart(idx)}
+                      onDragOver={handleDragOver(idx)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop(idx)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <td className="drag-cell" title="Drag to reorder">⋮⋮</td>
+                      <td className="order-idx-cell">{idx + 1}</td>
                       <td>{item.itemName}</td>
-                      <td>{item.meal ? item.meal.type : 'General'}</td>
-                      <td>₹{item.price.toFixed(2)}</td>
+                      <td>{item.meals && item.meals.length > 0
+                        ? item.meals.map(m => m.type).sort().join(', ')
+                        : 'General'}</td>
+                      <td>
+                        {hasRolePricing ? (
+                          <div className="price-breakdown">
+                            <div>Base: ₹{item.price.toFixed(2)}</div>
+                            <div>Staff: {item.staffPrice != null ? `₹${item.staffPrice.toFixed(2)}` : '—'}</div>
+                            <div>Worker: {item.workerPrice != null ? `₹${item.workerPrice.toFixed(2)}` : '—'}</div>
+                            <div>Outsider: {item.outsiderPrice != null ? `₹${item.outsiderPrice.toFixed(2)}` : '—'}</div>
+                          </div>
+                        ) : (
+                          <>₹{item.price.toFixed(2)}</>
+                        )}
+                      </td>
                       <td>
                         <span className={`status-badge ${item.isActive ? 'active' : 'inactive'}`}>
                           {item.isActive ? '✓ Active' : '✗ Disabled'}
@@ -298,7 +417,8 @@ const MealManagement = ({ onBack }) => {
                         </button>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -330,6 +450,7 @@ const MealManagement = ({ onBack }) => {
                     disabled={modalMode === 'edit'}
                   >
                     <option value="BREAKFAST">BREAKFAST</option>
+                    <option value="SNACKS">SNACKS</option>
                     <option value="LUNCH">LUNCH</option>
                     <option value="DINNER">DINNER</option>
                   </select>
@@ -388,21 +509,85 @@ const MealManagement = ({ onBack }) => {
                     required
                     placeholder="e.g., 40.00"
                   />
+                  <small className="form-hint">
+                    Charged to everyone when audience pricing is off.
+                  </small>
                 </div>
 
                 <div className="form-group">
-                  <label>Meal Type</label>
-                  <select
-                    value={menuForm.mealId}
-                    onChange={(e) => setMenuForm({ ...menuForm, mealId: e.target.value })}
-                  >
-                    <option value="">General (No specific meal)</option>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={menuForm.roleBasedPricing}
+                      onChange={(e) => setMenuForm({
+                        ...menuForm,
+                        roleBasedPricing: e.target.checked,
+                        // Clear per-audience prices when disabling so the payload sends nulls.
+                        staffPrice: e.target.checked ? menuForm.staffPrice : '',
+                        workerPrice: e.target.checked ? menuForm.workerPrice : '',
+                        outsiderPrice: e.target.checked ? menuForm.outsiderPrice : ''
+                      })}
+                    />
+                    <span>⚙️ Advanced: audience-based pricing</span>
+                  </label>
+                  <small className="form-hint">
+                    When enabled, only audiences with a set price can see &amp; order this item.
+                    A blank field hides the item from that audience.
+                  </small>
+                </div>
+
+                {menuForm.roleBasedPricing && (
+                  <div className="role-pricing-block">
+                    <div className="form-group">
+                      <label>Staff Price (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={menuForm.staffPrice}
+                        onChange={(e) => setMenuForm({ ...menuForm, staffPrice: e.target.value })}
+                        placeholder="Leave blank to hide from Staff"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Worker Price (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={menuForm.workerPrice}
+                        onChange={(e) => setMenuForm({ ...menuForm, workerPrice: e.target.value })}
+                        placeholder="Leave blank to hide from Workers"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Outsider / Guest Price (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={menuForm.outsiderPrice}
+                        onChange={(e) => setMenuForm({ ...menuForm, outsiderPrice: e.target.value })}
+                        placeholder="Leave blank to hide from Outsiders/Guests"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label>Meal Types (leave empty for always-available)</label>
+                  <div className="meal-checkboxes">
                     {meals.map((meal) => (
-                      <option key={meal.id} value={meal.id}>
-                        {meal.type}
-                      </option>
+                      <label key={meal.id} className="meal-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={menuForm.mealIds.includes(meal.id)}
+                          onChange={() => toggleMealIdInForm(meal.id)}
+                        />
+                        <span>{meal.type}</span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
 
                 <div className="form-group">

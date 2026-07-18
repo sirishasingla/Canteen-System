@@ -96,7 +96,7 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
                 <label>Employee ID</label>
                 <input
                   type="text"
-                  placeholder="Full 8-digit ID or last 5 digits"
+                  placeholder="User ID"
                   value={empId}
                   onChange={(e) => setEmpId(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
@@ -125,7 +125,7 @@ function WelcomeScreen({ onCustomerTypeSelect, onOpenAdmin }) {
                   <label>Host Employee ID</label>
                   <input
                     type="text"
-                    placeholder="Full 8-digit ID or last 5 digits"
+                    placeholder="User ID"
                     value={hostEmpId}
                     onChange={(e) => setHostEmpId(e.target.value)}
                     autoFocus

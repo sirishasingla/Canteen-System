@@ -106,62 +106,95 @@ public class DataInitializer implements CommandLineRunner {
     }
     
     private void initializeMeals() {
-        // Create meal times
         Meal breakfast = new Meal();
         breakfast.setType(MealType.BREAKFAST);
         breakfast.setStartTime(LocalTime.of(8, 0));
         breakfast.setEndTime(LocalTime.of(9, 0));
-        
+
+        Meal snacks = new Meal();
+        snacks.setType(MealType.SNACKS);
+        snacks.setStartTime(LocalTime.of(11, 0));
+        snacks.setEndTime(LocalTime.of(12, 0));
+
         Meal lunch = new Meal();
         lunch.setType(MealType.LUNCH);
         lunch.setStartTime(LocalTime.of(15, 0));
         lunch.setEndTime(LocalTime.of(17, 0));
-        
+
         Meal dinner = new Meal();
         dinner.setType(MealType.DINNER);
         dinner.setStartTime(LocalTime.of(20, 0));
         dinner.setEndTime(LocalTime.of(21, 0));
-        
+
         mealRepository.save(breakfast);
+        mealRepository.save(snacks);
         mealRepository.save(lunch);
         mealRepository.save(dinner);
-        
+
         System.out.println("Meal times initialized");
     }
-    
+
     private void initializeMenu() {
-        // Create menu items without meal time restrictions
-        menuRepository.save(createMenuItem("BREAD PAKODA", 5.0));
-        menuRepository.save(createMenuItem("SAMOSA", 5.0));
-        menuRepository.save(createMenuItem("MATTHI", 5.0));
-        menuRepository.save(createMenuItem("PARONTHA", 10.0));
-        menuRepository.save(createMenuItem("MAKKHAN TIKKI", 5.0));
-        menuRepository.save(createMenuItem("DAHI 100 GMS", 10.0));
-        menuRepository.save(createMenuItem("TEA", 5.0));
-        menuRepository.save(createMenuItem("CHAPATI", 2.5));
-        menuRepository.save(createMenuItem("DAL OR SABJI", 10.0));
-        menuRepository.save(createMenuItem("LUNCH/DINNER (WORKER)", 30.0));
-        menuRepository.save(createMenuItem("LUNCH/DINNER (STAFF)", 40.0));
-        menuRepository.save(createMenuItem("LUNCH/DINNER (OUTSIDER)", 50.0));
-        menuRepository.save(createMenuItem("LUNCH/DINNER (MEAL SLIP)", 30.0));
-        menuRepository.save(createMenuItem("BISCUIT", 10.0));
-        menuRepository.save(createMenuItem("NAMKEEN", 10.0));
-        menuRepository.save(createMenuItem("JUICE", 10.0));
-        menuRepository.save(createMenuItem("MILK BOTTLE", 25.0));
-        menuRepository.save(createMenuItem("JAL ZEERA", 10.0));
-        menuRepository.save(createMenuItem("CHIPS", 10.0));
-        menuRepository.save(createMenuItem("KURKURE", 10.0));
-        menuRepository.save(createMenuItem("LASSI", 10.0));
-        
+        Meal breakfast = mealRepository.findByType(MealType.BREAKFAST).orElseThrow();
+        Meal snacks = mealRepository.findByType(MealType.SNACKS).orElseThrow();
+        Meal lunch = mealRepository.findByType(MealType.LUNCH).orElseThrow();
+        Meal dinner = mealRepository.findByType(MealType.DINNER).orElseThrow();
+
+        // Order matches admin's current preferred layout. displayOrder in steps of 10 so
+        // admins can slot new items in between without a renumber.
+        int order = 10;
+
+        // Collapsed LUNCH / DINNER items with per-audience pricing (base is a fallback for
+        // GUEST / no-audience callers; kiosk hides them from Guest since role-restricted).
+        menuRepository.save(rolePriced("LUNCH", 0.0, 40.0, 30.0, 50.0, order++, lunch));
+        menuRepository.save(rolePriced("Dinner", 0.0, 40.0, 30.0, 50.0, order++, dinner));
+
+        // Always available (no meal restriction)
+        menuRepository.save(basic("TEA", 5.0, order++));
+
+        // Breakfast + snacks
+        menuRepository.save(basic("BREAD PAKODA", 5.0, order++, breakfast));
+        menuRepository.save(basic("SAMOSA", 5.0, order++, breakfast, snacks));
+        menuRepository.save(basic("MATTHI", 5.0, order++, breakfast, snacks));
+        menuRepository.save(basic("PARONTHA", 10.0, order++, breakfast));
+        menuRepository.save(basic("MAKKHAN TIKKI", 5.0, order++, breakfast));
+        menuRepository.save(basic("DAHI 100 GMS", 10.0, order++, breakfast, lunch, dinner));
+
+        // Lunch + Dinner shared items
+        menuRepository.save(basic("CHAPATI", 2.5, order++, lunch, dinner));
+        menuRepository.save(basic("DAL OR SABJI", 10.0, order++, lunch, dinner));
+
+        // Always-available snacks and drinks
+        menuRepository.save(basic("BISCUIT", 10.0, order++));
+        menuRepository.save(basic("NAMKEEN", 10.0, order++));
+        menuRepository.save(basic("JUICE", 10.0, order++));
+        menuRepository.save(basic("MILK BOTTLE", 25.0, order++));
+        menuRepository.save(basic("JAL ZEERA", 10.0, order++));
+        menuRepository.save(basic("CHIPS", 10.0, order++));
+        menuRepository.save(basic("KURKURE", 10.0, order++));
+        menuRepository.save(basic("LASSI", 10.0, order++));
+
         System.out.println("Menu items initialized");
     }
-    
-    private Menu createMenuItem(String itemName, Double price) {
+
+    private Menu basic(String itemName, Double price, int displayOrder, Meal... meals) {
         Menu menu = new Menu();
-        menu.setMeal(null);  // No meal association - available all the time
         menu.setItemName(itemName);
         menu.setPrice(price);
         menu.setIsActive(true);
+        menu.setDisplayOrder(displayOrder * 10);
+        if (meals != null && meals.length > 0) {
+            menu.setMeals(new java.util.HashSet<>(java.util.Arrays.asList(meals)));
+        }
+        return menu;
+    }
+
+    private Menu rolePriced(String itemName, Double basePrice, Double staff, Double worker,
+                            Double outsider, int displayOrder, Meal... meals) {
+        Menu menu = basic(itemName, basePrice, displayOrder, meals);
+        menu.setStaffPrice(staff);
+        menu.setWorkerPrice(worker);
+        menu.setOutsiderPrice(outsider);
         return menu;
     }
 }

@@ -4,7 +4,7 @@
 -- Create ENUM types
 CREATE TYPE customer_type AS ENUM ('EMPLOYEE', 'OUTSIDER', 'GUEST');
 CREATE TYPE employee_role AS ENUM ('WORKER', 'STAFF');
-CREATE TYPE meal_type AS ENUM ('BREAKFAST', 'LUNCH', 'DINNER');
+CREATE TYPE meal_type AS ENUM ('BREAKFAST', 'SNACKS', 'LUNCH', 'DINNER');
 
 -- Create Admin User table (for authenticated admin panel access)
 CREATE TABLE IF NOT EXISTS admin_user (
@@ -41,13 +41,23 @@ CREATE TABLE IF NOT EXISTS meal (
 -- Create Menu table
 CREATE TABLE IF NOT EXISTS menu (
     id BIGSERIAL PRIMARY KEY,
-    meal_id BIGINT REFERENCES meal(id) ON DELETE CASCADE,
     item_name VARCHAR(100) NOT NULL,
     price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
+    staff_price DECIMAL(10, 2) CHECK (staff_price IS NULL OR staff_price >= 0),
+    worker_price DECIMAL(10, 2) CHECK (worker_price IS NULL OR worker_price >= 0),
+    outsider_price DECIMAL(10, 2) CHECK (outsider_price IS NULL OR outsider_price >= 0),
     is_active BOOLEAN DEFAULT true,
+    display_order INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_meal_item UNIQUE (meal_id, item_name)
+    CONSTRAINT unique_menu_item UNIQUE (item_name)
+);
+
+-- Join table: which meals a menu item is served during (empty = always available)
+CREATE TABLE IF NOT EXISTS menu_meal (
+    menu_id BIGINT NOT NULL REFERENCES menu(id) ON DELETE CASCADE,
+    meal_id BIGINT NOT NULL REFERENCES meal(id) ON DELETE CASCADE,
+    PRIMARY KEY (menu_id, meal_id)
 );
 
 -- Create Orders table
@@ -81,8 +91,9 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- Create indexes for better query performance
 CREATE INDEX idx_employee_emp_id ON employee(emp_id);
 CREATE INDEX idx_employee_is_active ON employee(is_active);
-CREATE INDEX idx_menu_meal_id ON menu(meal_id);
 CREATE INDEX idx_menu_is_active ON menu(is_active);
+CREATE INDEX idx_menu_meal_menu ON menu_meal(menu_id);
+CREATE INDEX idx_menu_meal_meal ON menu_meal(meal_id);
 CREATE INDEX idx_orders_employee_id ON orders(employee_id);
 CREATE INDEX idx_orders_meal_id ON orders(meal_id);
 CREATE INDEX idx_orders_order_time ON orders(order_time);

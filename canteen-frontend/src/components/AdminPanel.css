@@ -13,6 +13,29 @@
   background: white;
   border-radius: 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  gap: 16px;
+}
+
+.header-back-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: #f0f2f5;
+  color: #333;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.header-back-btn:hover {
+  background: #e0e6ee;
+  transform: translateX(-2px);
 }
 
 .header-buttons {
@@ -797,4 +820,52 @@
   .manage-meals-btn {
     width: 100%;
   }
+}
+
+/* Management dashboard: compact cards grid replacing the old header buttons */
+.management-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.management-card {
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8ecff 100%);
+  border: 2px solid #667eea;
+  border-radius: 15px;
+  padding: 28px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.management-card:hover,
+.management-card:focus-visible {
+  outline: none;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+  background: linear-gradient(135deg, #eef1ff 0%, #dde3ff 100%);
+}
+
+.management-card .card-icon {
+  font-size: 2.8rem;
+  margin-bottom: 6px;
+}
+
+.management-card h3 {
+  color: #667eea;
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.management-card p {
+  color: #555;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
 }

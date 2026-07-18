@@ -99,9 +99,15 @@ export const api = {
     return response.json();
   },
 
-  // Get all active menu items (no time restriction)
-  getAllMenuItems: async () => {
-    const response = await authedFetch(`${API_BASE_URL}/menu/items`);
+  // Get all active menu items (no time restriction). Pass customerType (and empId for
+  // employees) so the backend filters + prices for that audience.
+  getAllMenuItems: async (customerType, empId) => {
+    const params = new URLSearchParams();
+    if (customerType) params.set('customerType', customerType);
+    if (empId) params.set('empId', empId);
+    const qs = params.toString();
+    const url = qs ? `${API_BASE_URL}/menu/items?${qs}` : `${API_BASE_URL}/menu/items`;
+    const response = await authedFetch(url);
     if (!response.ok) throw new Error('Failed to fetch menu items');
     return response.json();
   },
@@ -445,6 +451,33 @@ export const api = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to toggle menu item status');
+    }
+    return response.json();
+  },
+
+  // Move a menu item one slot up or down in the admin display order
+  moveMenuItem: async (menuId, direction) => {
+    const response = await authedFetch(
+      `${API_BASE_URL}/menu/${menuId}/move?direction=${encodeURIComponent(direction)}`,
+      { method: 'POST' }
+    );
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to move menu item');
+    }
+    return response.json();
+  },
+
+  // Bulk reorder — accepts the full ordered id list.
+  reorderMenuItems: async (orderedIds) => {
+    const response = await authedFetch(`${API_BASE_URL}/menu/reorder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || 'Failed to reorder menu items');
     }
     return response.json();
   },

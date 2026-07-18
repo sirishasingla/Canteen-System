@@ -332,8 +332,12 @@ public class ReportService {
         for (Orders order : orders) {
             for (OrderItems item : order.getOrderItems()) {
                 String itemName = item.getMenu().getItemName();
-                String category = item.getMenu().getMeal() != null ?
-                    item.getMenu().getMeal().getType().toString() : "GENERAL";
+                String category = (item.getMenu().getMeals() != null && !item.getMenu().getMeals().isEmpty())
+                    ? item.getMenu().getMeals().stream()
+                        .map(m -> m.getType().toString())
+                        .sorted()
+                        .collect(java.util.stream.Collectors.joining(", "))
+                    : "GENERAL";
                 ItemPurchaseData data = itemMap.getOrDefault(itemName,
                     new ItemPurchaseData(itemName, category));
                 data.addItem(item.getQuantity(), item.getPrice());

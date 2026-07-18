@@ -72,6 +72,9 @@ const AdminPanel = ({ currentUser, onBack, onLogout, onManageEmployees, onManage
   return (
     <div className="admin-panel">
       <div className="admin-header">
+        <button className="header-back-btn" onClick={onBack} title="Back to Kiosk" aria-label="Back to Kiosk">
+          ←
+        </button>
         <h1>📊 Admin Panel</h1>
         <div className="header-buttons">
           {currentUser && (
@@ -79,21 +82,10 @@ const AdminPanel = ({ currentUser, onBack, onLogout, onManageEmployees, onManage
               👤 {currentUser.username} <span className="role-tag">{currentUser.role}</span>
             </span>
           )}
-          {isAdmin && (
-            <button className="manage-employees-btn" onClick={onManageEmployees}>
-              👥 Manage Employees
-            </button>
-          )}
-          {isAdmin && (
-            <button className="manage-employees-btn" onClick={onManageOrders}>
-              📦 Manage Orders
-            </button>
-          )}
           <button className="change-password-btn" onClick={() => setShowChangePassword(true)}>
             🔑 Change Password
           </button>
           <button className="logout-btn" onClick={onLogout}>🚪 Logout</button>
-          <button className="back-button" onClick={onBack}>← Back to Kiosk</button>
         </div>
       </div>
 
@@ -102,7 +94,7 @@ const AdminPanel = ({ currentUser, onBack, onLogout, onManageEmployees, onManage
           className={activeTab === 'mealManagement' ? 'tab active' : 'tab'}
           onClick={() => { setActiveTab('mealManagement'); setError(''); }}
         >
-          🍽️ Meal Management
+          🛠️ Management
         </button>
         <button
           className={activeTab === 'excelReports' ? 'tab active' : 'tab'}
@@ -121,26 +113,34 @@ const AdminPanel = ({ currentUser, onBack, onLogout, onManageEmployees, onManage
       </div>
 
       <div className="admin-content">
-        {/* Meal Management Tab */}
+        {/* Management dashboard: small cards for each managed area */}
         {activeTab === 'mealManagement' && (
           <div className="report-section">
-            <h2>Meal Management</h2>
+            <h2>Management</h2>
             <p className="section-description">
-              Manage meal times, menu items, and meal configurations
+              Jump into the area you want to manage
             </p>
-            <div className="meal-management-card">
-              <div className="card-icon">🍽️</div>
-              <h3>Meal & Menu Management</h3>
-              <p>Configure meal times, add/edit menu items, and manage pricing</p>
-              <ul className="feature-list">
-                <li>✨ Add/Edit Meal Times</li>
-                <li>✨ Manage Menu Items</li>
-                <li>✨ Configure Meal Pricing</li>
-                <li>✨ Enable/Disable Menu Items</li>
-              </ul>
-              <button className="manage-meals-btn" onClick={onManageMeals}>
-                🍽️ Open Meal Management
-              </button>
+            <div className="management-cards">
+              <div className="management-card" onClick={onManageMeals} role="button" tabIndex={0}
+                   onKeyDown={(e) => e.key === 'Enter' && onManageMeals()}>
+                <div className="card-icon">🍽️</div>
+                <h3>Meal & Menu</h3>
+                <p>Meal times, menu items, pricing, and display order</p>
+              </div>
+              {isAdmin && (
+                <div className="management-card" onClick={onManageEmployees} role="button" tabIndex={0}
+                     onKeyDown={(e) => e.key === 'Enter' && onManageEmployees()}>
+                  <div className="card-icon">👥</div>
+                  <h3>Employees</h3>
+                  <p>Add, edit, disable, or bulk-import employees</p>
+                </div>
+              )}
+              <div className="management-card" onClick={onManageOrders} role="button" tabIndex={0}
+                   onKeyDown={(e) => e.key === 'Enter' && onManageOrders()}>
+                <div className="card-icon">📦</div>
+                <h3>Orders</h3>
+                <p>Browse, add, edit, or cancel orders (any date range)</p>
+              </div>
             </div>
           </div>
         )}

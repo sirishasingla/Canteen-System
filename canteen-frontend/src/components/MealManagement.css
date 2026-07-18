@@ -406,6 +406,138 @@
   cursor: pointer;
 }
 
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  color: #666;
+  font-size: 0.85rem;
+  font-weight: normal;
+  line-height: 1.4;
+}
+
+.role-pricing-block {
+  background: #f7f9fc;
+  border: 1px dashed #c4d0e0;
+  border-radius: 8px;
+  padding: 16px 16px 4px;
+  margin-bottom: 20px;
+}
+
+.role-pricing-block .form-group:last-child {
+  margin-bottom: 12px;
+}
+
+.price-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.order-cell {
+  width: 70px;
+}
+
+.order-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.order-btn {
+  background: #f0f2f5;
+  border: 1px solid #d0d7e0;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: #333;
+  transition: background 0.15s ease;
+}
+
+.order-btn:hover:not(:disabled) {
+  background: #e0e6ee;
+}
+
+.order-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.order-idx {
+  font-size: 0.75rem;
+  color: #667;
+  font-weight: 600;
+}
+
+.drag-hint {
+  color: #667;
+  font-size: 0.85rem;
+  margin: 0 0 10px;
+}
+
+.drag-cell {
+  width: 28px;
+  color: #999;
+  cursor: grab;
+  font-size: 1.1rem;
+  user-select: none;
+  text-align: center;
+}
+
+.drag-cell:active {
+  cursor: grabbing;
+}
+
+.order-idx-cell {
+  width: 40px;
+  color: #667;
+  font-weight: 600;
+  text-align: center;
+}
+
+.menu-table tr.dragging {
+  opacity: 0.4;
+}
+
+.menu-table tr.drag-over > td {
+  border-top: 2px solid #667eea;
+}
+
+.meal-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.meal-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.meal-checkbox:hover {
+  border-color: #667eea;
+}
+
+.meal-checkbox input {
+  cursor: pointer;
+}
+
 .modal-actions {
   display: flex;
   gap: 15px;

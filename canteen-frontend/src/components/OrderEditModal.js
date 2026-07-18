@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './OrderEditModal.css';
 import { api } from '../services/api';
 
@@ -10,9 +10,47 @@ const toDatetimeLocal = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+// UI-only "type" tabs. STAFF and WORKER both save as customerType=EMPLOYEE server-side.
+const UI_TYPES = ['STAFF', 'WORKER', 'OUTSIDER', 'GUEST'];
+
+const uiTypeToCustomerType = (t) => (t === 'STAFF' || t === 'WORKER') ? 'EMPLOYEE' : t;
+
+// Audience drives menu filtering + shown price:
+//   STAFF    → STAFF audience (needs staff_price to be visible on restricted items)
+//   WORKER   → WORKER audience
+//   OUTSIDER → OUTSIDER audience (uses outsider_price)
+//   GUEST    → null (universal items only, at base price)
+const audienceOf = (uiType) => {
+  if (uiType === 'STAFF' || uiType === 'WORKER' || uiType === 'OUTSIDER') return uiType;
+  return null;
+};
+
+const effectivePrice = (m, audience) => {
+  if (audience === 'STAFF' && m.staffPrice != null) return m.staffPrice;
+  if (audience === 'WORKER' && m.workerPrice != null) return m.workerPrice;
+  if (audience === 'OUTSIDER' && m.outsiderPrice != null) return m.outsiderPrice;
+  return m.price;
+};
+
+const isVisibleTo = (m, audience) => {
+  const restricted = m.staffPrice != null || m.workerPrice != null || m.outsiderPrice != null;
+  if (!restricted) return true;
+  if (audience === 'STAFF') return m.staffPrice != null;
+  if (audience === 'WORKER') return m.workerPrice != null;
+  if (audience === 'OUTSIDER') return m.outsiderPrice != null;
+  return false;
+};
+
 const OrderEditModal = ({ order, onClose, onSaved }) => {
   const isEdit = !!order;
-  const [customerType, setCustomerType] = useState(order?.customerType || 'EMPLOYEE');
+  // Initial UI type: for existing EMPLOYEE orders, guess STAFF as a safe default;
+  // once we've fetched the employee we correct it to their real role.
+  const initialUiType = (() => {
+    if (!order) return 'STAFF';
+    if (order.customerType === 'EMPLOYEE') return 'STAFF';
+    return order.customerType;
+  })();
+  const [uiType, setUiType] = useState(initialUiType);
   const [empId, setEmpId] = useState(order?.employeeId || '');
   const [outsiderName, setOutsiderName] = useState(order?.outsiderName || '');
   const [hostEmpId, setHostEmpId] = useState(order?.hostEmployeeId || '');
@@ -21,11 +59,16 @@ const OrderEditModal = ({ order, onClose, onSaved }) => {
   const [companyEmployeeCount, setCompanyEmployeeCount] = useState(order?.companyEmployeeCount || '');
   const [orderTime, setOrderTime] = useState(toDatetimeLocal(order?.orderTime));
   const [menuItems, setMenuItems] = useState([]);
+  // Employee's real role — the backend always charges at this rate, regardless of which
+  // STAFF/WORKER tab the admin picked (filter-only, charge-real-role).
+  const [employeeRole, setEmployeeRole] = useState(null);
   const [items, setItems] = useState(
     (order?.items || []).map(i => ({ menuId: i.itemId ?? i.menuId, quantity: i.quantity, itemName: i.itemName, price: i.price }))
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const isEmployeeType = uiType === 'STAFF' || uiType === 'WORKER';
 
   useEffect(() => {
     (async () => {
@@ -38,23 +81,65 @@ const OrderEditModal = ({ order, onClose, onSaved }) => {
     })();
   }, []);
 
-  // For edit mode, the order's item.itemId is the OrderItem.id, not menuId.
-  // We need to map by item name to get the actual menuId. Once the menu loads,
-  // reconcile items so save works correctly.
+  // Look up the employee's real role for accurate billing display.
+  // Also — when opening an existing EMPLOYEE order — snap the UI tab to their actual role.
+  useEffect(() => {
+    if (!isEmployeeType || !empId.trim()) {
+      setEmployeeRole(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const emp = await api.getEmployeeByEmpId(empId.trim());
+        if (cancelled) return;
+        setEmployeeRole(emp.role);
+        // On first load of an existing edit, align the UI tab with the real role.
+        if (isEdit && order?.customerType === 'EMPLOYEE' && (emp.role === 'STAFF' || emp.role === 'WORKER')) {
+          setUiType(prev => (prev === 'STAFF' || prev === 'WORKER') ? emp.role : prev);
+        }
+      } catch {
+        if (!cancelled) setEmployeeRole(null);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmployeeType, empId]);
+
+  // Audience used to filter + price the item dropdown.
+  const audience = audienceOf(uiType);
+  // Audience used for saved line totals — for EMPLOYEE this is the employee's real role
+  // (charge-real-role), so the UI total matches what the backend will save.
+  const billedAudience = isEmployeeType ? (employeeRole || audience) : audience;
+
+  const availableMenuItems = useMemo(
+    () => menuItems
+      .filter(m => isVisibleTo(m, audience))
+      .map(m => ({ ...m, effectivePrice: effectivePrice(m, audience) })),
+    [menuItems, audience]
+  );
+
+  // For edit mode, order.items[].itemId is OrderItem.id, not menuId — reconcile by name.
   useEffect(() => {
     if (isEdit && menuItems.length && items.length && items.some(i => !i.menuId || typeof i.menuId !== 'number' || !menuItems.find(m => m.id === i.menuId))) {
       setItems(prev => prev.map(i => {
         const found = menuItems.find(m => m.itemName === i.itemName);
-        return found ? { ...i, menuId: found.id, price: found.price } : i;
+        return found ? { ...i, menuId: found.id } : i;
       }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuItems]);
 
+  const displayItems = useMemo(() => items.map(it => {
+    const m = menuItems.find(x => x.id === it.menuId);
+    if (!m) return it;
+    return { ...it, itemName: m.itemName, price: effectivePrice(m, billedAudience) };
+  }), [items, menuItems, billedAudience]);
+
   const addItem = () => {
-    if (!menuItems.length) return;
-    const first = menuItems[0];
-    setItems([...items, { menuId: first.id, itemName: first.itemName, price: first.price, quantity: 1 }]);
+    if (!availableMenuItems.length) return;
+    const first = availableMenuItems[0];
+    setItems([...items, { menuId: first.id, itemName: first.itemName, quantity: 1 }]);
   };
 
   const updateItem = (idx, field, value) => {
@@ -62,7 +147,7 @@ const OrderEditModal = ({ order, onClose, onSaved }) => {
       if (i !== idx) return it;
       if (field === 'menuId') {
         const menu = menuItems.find(m => m.id === Number(value));
-        return { ...it, menuId: Number(value), itemName: menu?.itemName, price: menu?.price };
+        return { ...it, menuId: Number(value), itemName: menu?.itemName };
       }
       if (field === 'quantity') {
         return { ...it, quantity: Math.max(1, Number(value) || 1) };
@@ -73,13 +158,13 @@ const OrderEditModal = ({ order, onClose, onSaved }) => {
 
   const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
 
-  const totalAmount = items.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0);
+  const totalAmount = displayItems.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0);
 
   const validate = () => {
     if (!items.length) return 'Add at least one item';
-    if (customerType === 'EMPLOYEE' && !empId.trim()) return 'Employee ID is required';
-    if (customerType === 'OUTSIDER' && !outsiderName.trim()) return 'Outsider name is required';
-    if (customerType === 'GUEST') {
+    if (isEmployeeType && !empId.trim()) return 'Employee ID is required';
+    if (uiType === 'OUTSIDER' && !outsiderName.trim()) return 'Outsider name is required';
+    if (uiType === 'GUEST') {
       if (!hostEmpId.trim()) return 'Host Employee ID is required';
       if (!purpose.trim()) return 'Purpose is required';
       if (!guestCount) return 'Number of guests is required';
@@ -97,6 +182,7 @@ const OrderEditModal = ({ order, onClose, onSaved }) => {
     setLoading(true);
     setError('');
 
+    const customerType = uiTypeToCustomerType(uiType);
     const payload = {
       customerType,
       items: items.map(i => ({ menuId: i.menuId, quantity: Number(i.quantity) })),
@@ -137,38 +223,46 @@ const OrderEditModal = ({ order, onClose, onSaved }) => {
           <div className="oem-section">
             <label>Customer Type</label>
             <div className="oem-type-picker">
-              {['EMPLOYEE', 'OUTSIDER', 'GUEST'].map(t => (
+              {UI_TYPES.map(t => (
                 <button
                   key={t}
                   type="button"
-                  className={`oem-type-btn ${customerType === t ? 'active' : ''}`}
-                  onClick={() => setCustomerType(t)}
+                  className={`oem-type-btn ${uiType === t ? 'active' : ''}`}
+                  onClick={() => setUiType(t)}
                 >
                   {t}
                 </button>
               ))}
             </div>
+            {isEmployeeType && employeeRole && employeeRole !== uiType && (
+              <p className="hint">
+                Note: employee's actual role is {employeeRole}. The order will be billed at the {employeeRole} price.
+              </p>
+            )}
           </div>
 
-          {customerType === 'EMPLOYEE' && (
+          {isEmployeeType && (
             <div className="oem-section">
               <label>Employee ID *</label>
-              <input value={empId} onChange={e => setEmpId(e.target.value)} placeholder="Full 8-digit ID or last 5 digits" />
+              <input value={empId} onChange={e => setEmpId(e.target.value)} placeholder="User ID" />
+              {empId.trim() && !employeeRole && (
+                <p className="hint">Enter a valid employee ID to see role-priced items.</p>
+              )}
             </div>
           )}
 
-          {customerType === 'OUTSIDER' && (
+          {uiType === 'OUTSIDER' && (
             <div className="oem-section">
               <label>Outsider Name *</label>
               <input value={outsiderName} onChange={e => setOutsiderName(e.target.value)} />
             </div>
           )}
 
-          {customerType === 'GUEST' && (
+          {uiType === 'GUEST' && (
             <>
               <div className="oem-section">
                 <label>Host Employee ID *</label>
-                <input value={hostEmpId} onChange={e => setHostEmpId(e.target.value)} placeholder="Full 8-digit ID or last 5 digits" />
+                <input value={hostEmpId} onChange={e => setHostEmpId(e.target.value)} placeholder="Host User ID" />
               </div>
               <div className="oem-section">
                 <label>Purpose *</label>
@@ -195,27 +289,45 @@ const OrderEditModal = ({ order, onClose, onSaved }) => {
           <div className="oem-section">
             <div className="oem-items-header">
               <label>Items *</label>
-              <button type="button" className="oem-add-item" onClick={addItem}>➕ Add Item</button>
+              <button type="button" className="oem-add-item" onClick={addItem} disabled={!availableMenuItems.length}>➕ Add Item</button>
             </div>
             {items.length === 0 && <p className="oem-empty">No items yet — click "Add Item"</p>}
-            {items.map((it, idx) => (
-              <div key={idx} className="oem-item-row">
-                <select value={it.menuId || ''} onChange={e => updateItem(idx, 'menuId', e.target.value)}>
-                  {menuItems.map(m => (
-                    <option key={m.id} value={m.id}>{m.itemName} — ₹{m.price}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min="1"
-                  value={it.quantity}
-                  onChange={e => updateItem(idx, 'quantity', e.target.value)}
-                  className="oem-qty"
-                />
-                <span className="oem-line-total">₹{((it.price || 0) * (it.quantity || 0)).toFixed(2)}</span>
-                <button type="button" className="oem-remove-item" onClick={() => removeItem(idx)}>✕</button>
-              </div>
-            ))}
+            {!availableMenuItems.length && items.length === 0 && (
+              <p className="oem-empty">No items available for this customer type.</p>
+            )}
+            {displayItems.map((it, idx) => {
+              const currentInAudience = availableMenuItems.some(m => m.id === it.menuId);
+              // Ensure the currently-selected menuId is present as an option even if it's not
+              // in the current audience (e.g. editing an older order after the customer type changed).
+              const options = currentInAudience
+                ? availableMenuItems
+                : (() => {
+                    const fallback = menuItems.find(m => m.id === it.menuId);
+                    return fallback
+                      ? [{ ...fallback, effectivePrice: it.price }, ...availableMenuItems]
+                      : availableMenuItems;
+                  })();
+              return (
+                <div key={idx} className="oem-item-row">
+                  <select value={it.menuId || ''} onChange={e => updateItem(idx, 'menuId', e.target.value)}>
+                    {options.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.itemName} — ₹{Number(m.effectivePrice).toFixed(2)}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    value={it.quantity}
+                    onChange={e => updateItem(idx, 'quantity', e.target.value)}
+                    className="oem-qty"
+                  />
+                  <span className="oem-line-total">₹{((it.price || 0) * (it.quantity || 0)).toFixed(2)}</span>
+                  <button type="button" className="oem-remove-item" onClick={() => removeItem(idx)}>✕</button>
+                </div>
+              );
+            })}
             <div className="oem-total">Total: ₹{totalAmount.toFixed(2)}</div>
           </div>
 

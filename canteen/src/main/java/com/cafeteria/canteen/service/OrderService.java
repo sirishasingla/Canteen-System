@@ -158,17 +158,37 @@ public class OrderService {
         if (order.getOrderItems() == null) {
             order.setOrderItems(new ArrayList<>());
         }
+        // Audience derived from the customer type / employee role drives line-item pricing.
+        MenuService.Audience audience = audienceFor(order);
         for (OrderItemRequest itemRequest : request.getItems()) {
             Menu menuItem = menuService.getMenuById(itemRequest.getMenuId());
+            Double effectivePrice = menuService.effectivePriceFor(menuItem, audience);
             OrderItems orderItem = new OrderItems();
             orderItem.setOrder(order);
             orderItem.setMenu(menuItem);
             orderItem.setQuantity(itemRequest.getQuantity());
-            orderItem.setPrice(menuItem.getPrice());
+            orderItem.setPrice(effectivePrice);
             order.getOrderItems().add(orderItem);
-            totalAmount += menuItem.getPrice() * itemRequest.getQuantity();
+            totalAmount += effectivePrice * itemRequest.getQuantity();
         }
         order.setTotalAmount(totalAmount);
+    }
+
+    private MenuService.Audience audienceFor(Orders order) {
+        CustomerType type = order.getCustomerType();
+        if (type == CustomerType.OUTSIDER) {
+            return MenuService.Audience.OUTSIDER;
+        }
+        // GUEST orders pay the base price (universal items only), so no audience override.
+        if (type == CustomerType.GUEST) {
+            return null;
+        }
+        if (type == CustomerType.EMPLOYEE && order.getEmployee() != null) {
+            return order.getEmployee().getRole() == com.cafeteria.canteen.enums.EmployeeRole.STAFF
+                    ? MenuService.Audience.STAFF
+                    : MenuService.Audience.WORKER;
+        }
+        return null;
     }
 
     /**

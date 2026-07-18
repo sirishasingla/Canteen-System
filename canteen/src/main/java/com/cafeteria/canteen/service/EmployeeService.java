@@ -23,7 +23,8 @@ public class EmployeeService {
     }
 
     /**
-     * Get employee by empId. Accepts either the full 8-digit ID or the last 5 digits.
+     * Get employee by empId. Accepts the full 8-digit ID, or a shorter numeric suffix
+     * which is auto-padded to 8 digits by {@link EmpIdUtil#normalize(String)}.
      */
     public Employee getEmployeeByEmpId(String empId) {
         String normalized = EmpIdUtil.normalize(empId);
